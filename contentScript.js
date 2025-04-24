@@ -20,10 +20,10 @@ function createChatBox() {
 
   chatBox.innerHTML = `
     <div style="text-align: right; margin-bottom: 5px;">
-    <button id="closeChatBox" style="background: transparent; border: none; color: white; font-size: 16px; cursor: pointer;">×</button>
+      <button id="closeChatBox" style="background: transparent; border: none; color: white; font-size: 16px; cursor: pointer;">×</button>
     </div>
     <input type="text" id="questionInput" placeholder="Ask your question" 
-    style="width: 100%; padding: 5px; margin-bottom: 5px; box-sizing: border-box; border-radius: 8px;">
+      style="width: 100%; padding: 5px; margin-bottom: 5px; box-sizing: border-box; border-radius: 8px;">
     <button id="sendQuestionButton" style="width: 100%; padding: 5px; border-radius: 8px;">Send Question</button>
     <button id="screenshotButton" style="width: 100%; padding: 5px; margin-top: 8px; border-radius: 8px;">Take Screenshot</button>
     <div id="chatContent" style="margin-top: 8px; max-height: 150px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 5px;"></div>
@@ -80,24 +80,24 @@ function sendQuestionToBackend(question) {
     },
     body: JSON.stringify(data),
   })
-  .then(response => response.json())
-  .then(data => {
-    const chatContent = document.getElementById('chatContent');
-    const formattedTime = formatTime(timestamp);
+    .then(response => response.json())
+    .then(data => {
+      const chatContent = document.getElementById('chatContent');
+      const formattedTime = formatTime(timestamp);
 
-    const messageBlock = document.createElement('div');
-    messageBlock.style.marginBottom = '8px';
-    messageBlock.innerHTML = `
-      <div><strong>You:</strong> ${question} <span style="float: right; color: #bbb;">[${formattedTime}]</span></div>
-      <div><strong>Bot:</strong> ${data.answer}</div>
-    `;
+      const messageBlock = document.createElement('div');
+      messageBlock.style.marginBottom = '8px';
+      messageBlock.innerHTML = `
+        <div><strong>You:</strong> ${question} <span style="float: right; color: #bbb;">[${formattedTime}]</span></div>
+        <div><strong>Bot:</strong> ${data.answer}</div>
+      `;
 
-    chatContent.appendChild(messageBlock);
-    chatContent.scrollTop = chatContent.scrollHeight; // auto-scroll
-  })
-  .catch(error => {
-    console.error('Error:', error);
-  });
+      chatContent.appendChild(messageBlock);
+      chatContent.scrollTop = chatContent.scrollHeight;
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
 }
 
 // Format time (seconds) to MM:SS
@@ -107,7 +107,7 @@ function formatTime(seconds) {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// Take a screenshot of video
+// Take a screenshot of video and show in chat box
 function takeScreenshot() {
   const video = document.querySelector('video');
   const canvas = document.createElement('canvas');
@@ -116,21 +116,44 @@ function takeScreenshot() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+  const timestamp = video ? video.currentTime : 0;
+  const formattedTime = formatTime(timestamp);
+  const chatContent = document.getElementById('chatContent');
+
+  // Show screenshot in chat
+  const screenshotImage = new Image();
+  screenshotImage.src = canvas.toDataURL('image/png');
+  screenshotImage.style.maxWidth = '100%';
+  screenshotImage.style.borderRadius = '4px';
+  screenshotImage.style.marginTop = '5px';
+
+  const messageBlock = document.createElement('div');
+  messageBlock.style.marginBottom = '10px';
+  messageBlock.innerHTML = `
+    <div><strong>You:</strong> Screenshot taken <span style="float: right; color: #bbb;">[${formattedTime}]</span></div>
+  `;
+  messageBlock.appendChild(screenshotImage);
+  chatContent.appendChild(messageBlock);
+  chatContent.scrollTop = chatContent.scrollHeight;
+
+  // Upload to backend
   canvas.toBlob((blob) => {
     const formData = new FormData();
     formData.append('screenshot', blob, 'screenshot.png');
+    formData.append('videoUrl', window.location.href);
+    formData.append('timestamp', timestamp);
 
     fetch('http://localhost:3000/upload-screenshot', {
       method: 'POST',
       body: formData,
     })
-    .then(response => response.json())
-    .then(data => {
-      console.log('Screenshot uploaded:', data);
-    })
-    .catch(error => {
-      console.error('Error uploading screenshot:', error);
-    });
+      .then(response => response.json())
+      .then(data => {
+        console.log('Screenshot uploaded:', data);
+      })
+      .catch(error => {
+        console.error('Error uploading screenshot:', error);
+      });
   });
 }
 
