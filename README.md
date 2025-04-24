@@ -4,10 +4,15 @@ This Chrome Extension overlays a custom chat box on YouTube videos. Users can as
 
 ## Features
 
-- Chat box appears when a YouTube video plays.
-- Automatically hides when paused or ended.
-- Send question to backend with current timestamp and video URL.
-- Take and upload screenshot of current video frame.
+- **VN Icon**: A floating icon at the top-right corner to toggle the chat overlay visibility.
+- **Chat Box**: A chat window at the bottom-right corner with the following features:
+  - **Input field**: For asking questions.
+  - **Send Question button**: Sends the question along with the current video URL and timestamp to the backend.
+  - **Take Screenshot button**: Captures a screenshot of the video and sends it to the backend.
+  - **Message Display**: Displays the user's question and the bot's response along with a clickable timestamp.
+- **Screenshot Functionality**: Takes a screenshot of the video and appends it in the chat.
+- **Timestamps**: Each message is timestamped, and clicking on a timestamp will jump to that part of the video.
+- **Dynamic Setup**: The extension will dynamically initialize the overlay when the page URL changes.
 
 ## How to Install the Extension
 

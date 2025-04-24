@@ -1,3 +1,43 @@
+// Function to reset chat content
+function resetChatBox() {
+  const chatBox = document.getElementById('chatOverlay');
+  const chatContent = document.getElementById('chatContent');
+  if (chatBox && chatContent) {
+    chatContent.innerHTML = ''; // Clear all chat messages
+  }
+}
+
+// Function to create the VN icon inside the overlay
+function createVNIcon() {
+  if (document.getElementById('vnIcon')) return;
+
+  const vnIcon = document.createElement('div');
+  vnIcon.id = 'vnIcon';
+  vnIcon.style.position = 'fixed';
+  vnIcon.style.right = '20px';
+  vnIcon.style.top = '20px';
+  vnIcon.style.padding = '10px';
+  vnIcon.style.backgroundColor = '#ff0000';
+  vnIcon.style.color = 'white';
+  vnIcon.style.borderRadius = '50%';
+  vnIcon.style.cursor = 'pointer';
+  vnIcon.style.zIndex = '9999';
+  vnIcon.style.fontSize = '18px';
+  vnIcon.style.display = 'flex';
+  vnIcon.style.alignItems = 'center';
+  vnIcon.style.justifyContent = 'center';
+  vnIcon.innerHTML = 'VN';
+
+  document.body.appendChild(vnIcon);
+
+  vnIcon.addEventListener('click', () => {
+    const chatBox = document.getElementById('chatOverlay');
+    if (chatBox) {
+      chatBox.style.display = chatBox.style.display === 'block' ? 'none' : 'block';
+    }
+  });
+}
+
 // Function to create the chat box inside the overlay
 function createChatBox() {
   if (document.getElementById('chatOverlay')) return;
@@ -22,7 +62,7 @@ function createChatBox() {
     <div style="text-align: right; margin-bottom: 5px;">
       <button id="closeChatBox" style="background: transparent; border: none; color: white; font-size: 16px; cursor: pointer;">×</button>
     </div>
-    <input type="text" id="questionInput" placeholder="Ask your question" 
+    <input type="text" id="questionInput" placeholder="Ask your question"
       style="width: 100%; padding: 5px; margin-bottom: 5px; box-sizing: border-box; border-radius: 8px;">
     <button id="sendQuestionButton" style="width: 100%; padding: 5px; border-radius: 8px;">Send Question</button>
     <button id="screenshotButton" style="width: 100%; padding: 5px; margin-top: 8px; border-radius: 8px;">Take Screenshot</button>
@@ -31,37 +71,22 @@ function createChatBox() {
 
   document.body.appendChild(chatBox);
 
-  // Close button
   document.getElementById('closeChatBox').addEventListener('click', () => {
     chatBox.style.display = 'none';
   });
 
-  // Send question
   document.getElementById('sendQuestionButton').addEventListener('click', () => {
     const question = document.getElementById('questionInput').value;
     if (question) {
       sendQuestionToBackend(question);
-      document.getElementById('questionInput').value = ''; // Clear input
+      // Do not clear the input field so previous questions stay there
     }
   });
 
-  // Screenshot
   document.getElementById('screenshotButton').addEventListener('click', takeScreenshot);
 }
 
-// Show the chat box when video plays
-function showChatBox() {
-  const chatBox = document.getElementById('chatOverlay');
-  if (chatBox) chatBox.style.display = 'block';
-}
-
-// Hide the chat box
-function hideChatBox() {
-  const chatBox = document.getElementById('chatOverlay');
-  if (chatBox) chatBox.style.display = 'none';
-}
-
-// Send question to backend
+// Send question to backend and display it along with the answer
 function sendQuestionToBackend(question) {
   const video = document.querySelector('video');
   const videoUrl = window.location.href;
@@ -85,26 +110,24 @@ function sendQuestionToBackend(question) {
       const chatContent = document.getElementById('chatContent');
       const formattedTime = formatTime(timestamp);
 
+      // Create the message block for the question and bot's answer
       const messageBlock = document.createElement('div');
       messageBlock.style.marginBottom = '8px';
       messageBlock.innerHTML = `
-        <div><strong>You:</strong> ${question} <span style="float: right; color: #bbb;">[${formattedTime}]</span></div>
+        <div><strong>You:</strong> ${question} 
+          <span class="timestamp" data-time="${timestamp}" style="float: right; color: #bbb; cursor: pointer; text-decoration: underline;">[${formattedTime}]</span>
+        </div>
         <div><strong>Bot:</strong> ${data.answer}</div>
       `;
 
+      // Append the message block to chat content (doesn't clear previous messages)
       chatContent.appendChild(messageBlock);
       chatContent.scrollTop = chatContent.scrollHeight;
+      addTimestampListeners();
     })
     .catch(error => {
       console.error('Error:', error);
     });
-}
-
-// Format time (seconds) to MM:SS
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
 // Take a screenshot of video and show in chat box
@@ -120,7 +143,6 @@ function takeScreenshot() {
   const formattedTime = formatTime(timestamp);
   const chatContent = document.getElementById('chatContent');
 
-  // Show screenshot in chat
   const screenshotImage = new Image();
   screenshotImage.src = canvas.toDataURL('image/png');
   screenshotImage.style.maxWidth = '100%';
@@ -130,13 +152,15 @@ function takeScreenshot() {
   const messageBlock = document.createElement('div');
   messageBlock.style.marginBottom = '10px';
   messageBlock.innerHTML = `
-    <div><strong>You:</strong> Screenshot taken <span style="float: right; color: #bbb;">[${formattedTime}]</span></div>
+    <div><strong>You:</strong> Screenshot taken 
+      <span class="timestamp" data-time="${timestamp}" style="float: right; color: #bbb; cursor: pointer; text-decoration: underline;">[${formattedTime}]</span>
+    </div>
   `;
   messageBlock.appendChild(screenshotImage);
   chatContent.appendChild(messageBlock);
   chatContent.scrollTop = chatContent.scrollHeight;
+  addTimestampListeners();
 
-  // Upload to backend
   canvas.toBlob((blob) => {
     const formData = new FormData();
     formData.append('screenshot', blob, 'screenshot.png');
@@ -157,43 +181,63 @@ function takeScreenshot() {
   });
 }
 
-// Initialize overlay
-function setupChatOverlay() {
-  if (!window.location.href.includes("youtube.com/watch")) {
-    hideChatBox();
-    return;
-  }
-
-  createChatBox();
-
-  const checkInterval = setInterval(() => {
-    const video = document.querySelector('video');
-    if (video && !video.hasAttribute('data-overlay-set')) {
-      video.setAttribute('data-overlay-set', 'true');
-
-      video.addEventListener('play', showChatBox);
-      video.addEventListener('pause', hideChatBox);
-      video.addEventListener('ended', hideChatBox);
-
-      if (!video.paused) {
-        showChatBox();
-      }
-
-      clearInterval(checkInterval);
-    }
-  }, 500);
+// Format time (seconds) to MM:SS
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// Detect page changes (SPA)
+// Make timestamps clickable
+function addTimestampListeners() {
+  const timestamps = document.querySelectorAll('.timestamp');
+  timestamps.forEach(span => {
+    span.addEventListener('click', () => {
+      const time = parseFloat(span.dataset.time);
+      const video = document.querySelector('video');
+      if (video && !isNaN(time)) {
+        video.currentTime = time;
+        video.play();
+      }
+    });
+  });
+}
+
+// Setup overlay when video is ready
+function setupChatOverlay() {
+  const video = document.querySelector('video');
+  if (!video) return;
+
+  resetChatBox();
+  createVNIcon();
+  createChatBox();
+
+  video.addEventListener('pause', () => {
+    const chatBox = document.getElementById('chatOverlay');
+    if (chatBox) chatBox.style.display = 'block';
+  });
+
+  video.addEventListener('ended', () => {
+    const chatBox = document.getElementById('chatOverlay');
+    if (chatBox) chatBox.style.display = 'none';
+  });
+}
+
+// Watch for URL/video changes
 let lastUrl = location.href;
-new MutationObserver(() => {
-  if (location.href !== lastUrl) {
-    lastUrl = location.href;
+const observer = new MutationObserver(() => {
+  const currentUrl = location.href;
+  if (currentUrl !== lastUrl) {
+    lastUrl = currentUrl;
     setupChatOverlay();
   }
-}).observe(document, { subtree: true, childList: true });
-
-// Initial load
-window.addEventListener('load', () => {
-  setupChatOverlay();
 });
+
+observer.observe(document, { subtree: true, childList: true });
+
+// Initial load setup
+window.addEventListener('load', setupChatOverlay);
+
+
+
+
