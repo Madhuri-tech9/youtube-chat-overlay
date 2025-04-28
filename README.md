@@ -1,42 +1,33 @@
-# YouTube Chat Overlay Chrome Extension
-
-This Chrome Extension overlays a custom chat box on YouTube videos. Users can ask questions related to the video, capture screenshots of the video frame, and send data (video URL, timestamp, question) to a backend server.
+# YouTube Overlay Extension
+This project adds a custom overlay with a VN button on YouTube video pages.
+The overlay provides three functionalities via tabs: Q/A, Clip, and Notes.
 
 ## Features
+- Floating VN Button:
+Appears when watching YouTube videos. Clicking it toggles the overlay.
 
-- **VN Icon**: A floating icon at the top-right corner to toggle the chat overlay visibility.
-- **Chat Box**: A chat window at the bottom-right corner with the following features:
-  - **Input field**: For asking questions.
-  - **Send Question button**: Sends the question along with the current video URL and timestamp to the backend.
-  - **Take Screenshot button**: Captures a screenshot of the video and sends it to the backend.
-  - **Message Display**: Displays the user's question and the bot's response along with a clickable timestamp.
-- **Screenshot Functionality**: Takes a screenshot of the video and appends it in the chat.
-- **Timestamps**: Each message is timestamped, and clicking on a timestamp will jump to that part of the video.
-- **Dynamic Setup**: The extension will dynamically initialize the overlay when the page URL changes.
+Overlay Sections:
+1. Q/A Tab:
+Ask a question and fetch an answer from a server (e.g., localhost:5000).
+2. Clip Tab:
+Input and analyze short clips (UI only; backend integration needed).
+3. Notes Tab:
+Create, save, delete, and export personal notes. Notes are stored in localStorage.
+- Auto Detects YouTube Watch Pages:
+- The button and overlay automatically appear only on youtube.com/watch URLs.
 
-## How to Install the Extension
+## Installation
 
-1. Open **Google Chrome**.
-2. Go to `chrome://extensions/`.
-3. Enable **Developer mode** (top-right toggle).
-4. Click **Load unpacked**.
-5. Select the folder
+1. Clone or download the project.
+2. If using as a Chrome Extension:
+- Open Chrome and go to chrome://extensions/.
+- Enable Developer mode (top right).
+- Click Load unpacked.
+- Select your project folder.
+3. If directly injecting into a website for testing:
+- Copy-paste the JavaScript into the console while on a YouTube video page.
 
-## How to Use the Extension
+## API Requirement
 
-1. Visit any YouTube video.
-2. When the video starts playing:
-   - A chat box will appear on screen.
-3. Type a question in the input box and click **"Send Question"**.
-   - It will send the question, video URL, and current timestamp to the backend.
-4. Click **"Take Screenshot"** to capture the current frame and upload it.
-
-## Backend Requirements
-
-Ensure your backend server is running locally on:
-http://localhost:3000
-
-It should have the following endpoints:
-
-- `POST /ask-question` – Accepts JSON with question, video URL, and timestamp.
-- `POST /upload-screenshot` – Accepts a screenshot file via `multipart/form-data`.
+- Q/A feature expects a backend running at:
+http://localhost:5000/ask
