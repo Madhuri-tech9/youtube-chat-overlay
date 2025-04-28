@@ -121,6 +121,7 @@
     function checkAndInject() {
         const currentUrl = window.location.href;
         if (currentUrl.includes('youtube.com/watch')) {
+            localStorage.removeItem('notes'); // <<== Add this line
             createVNButton();
             createOverlay();
         } else {
