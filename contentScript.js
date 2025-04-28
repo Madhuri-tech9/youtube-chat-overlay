@@ -1,243 +1,257 @@
-// Function to reset chat content
-function resetChatBox() {
-  const chatBox = document.getElementById('chatOverlay');
-  const chatContent = document.getElementById('chatContent');
-  if (chatBox && chatContent) {
-    chatContent.innerHTML = ''; // Clear all chat messages
-  }
-}
+(function () {
+    let overlay = null;
+    let vnButton = null;
 
-// Function to create the VN icon inside the overlay
-function createVNIcon() {
-  if (document.getElementById('vnIcon')) return;
+    function createVNButton() {
+        if (vnButton) return;
 
-  const vnIcon = document.createElement('div');
-  vnIcon.id = 'vnIcon';
-  vnIcon.style.position = 'fixed';
-  vnIcon.style.right = '20px';
-  vnIcon.style.top = '20px';
-  vnIcon.style.padding = '10px';
-  vnIcon.style.backgroundColor = '#ff0000';
-  vnIcon.style.color = 'white';
-  vnIcon.style.borderRadius = '50%';
-  vnIcon.style.cursor = 'pointer';
-  vnIcon.style.zIndex = '9999';
-  vnIcon.style.fontSize = '18px';
-  vnIcon.style.display = 'flex';
-  vnIcon.style.alignItems = 'center';
-  vnIcon.style.justifyContent = 'center';
-  vnIcon.innerHTML = 'VN';
+        vnButton = document.createElement('button');
+        vnButton.id = 'vn-button';
+        vnButton.innerText = 'VN';
+        vnButton.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            background: #FFEB3B;
+            color: black;
+            font-weight: bold;
+            border: 2px solid black;
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 0 6px rgba(0,0,0,0.4);
+        `;
+        document.body.appendChild(vnButton);
 
-  document.body.appendChild(vnIcon);
-
-  vnIcon.addEventListener('click', () => {
-    const chatBox = document.getElementById('chatOverlay');
-    if (chatBox) {
-      chatBox.style.display = chatBox.style.display === 'block' ? 'none' : 'block';
+        vnButton.addEventListener('click', toggleOverlay);
     }
-  });
-}
 
-// Function to create the chat box inside the overlay
-function createChatBox() {
-  if (document.getElementById('chatOverlay')) return;
+    function createOverlay() {
+        if (overlay) return;
 
-  const chatBox = document.createElement('div');
-  chatBox.id = 'chatOverlay';
-  chatBox.style.position = 'fixed';
-  chatBox.style.right = '20px';
-  chatBox.style.bottom = '20px';
-  chatBox.style.width = '300px';
-  chatBox.style.height = '400px';
-  chatBox.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-  chatBox.style.color = 'white';
-  chatBox.style.padding = '10px';
-  chatBox.style.zIndex = '9999';
-  chatBox.style.display = 'none';
-  chatBox.style.boxSizing = 'border-box';
-  chatBox.style.borderRadius = '8px';
-  chatBox.style.fontSize = '12px';
+        overlay = document.createElement('div');
+        overlay.id = 'my-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 130px;
+            right: 20px;
+            width: 320px;
+            height: 400px;
+            background: #f0f0d8;
+            border: 2px solid #FFEB3B;
+            border-radius: 15px;
+            z-index: 10000;
+            padding: 12px;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            display: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.4);
+        `;
+        document.body.appendChild(overlay);
 
-  chatBox.innerHTML = `
-    <div style="text-align: right; margin-bottom: 5px;">
-      <button id="closeChatBox" style="background: transparent; border: none; color: white; font-size: 16px; cursor: pointer;">×</button>
-    </div>
-    <input type="text" id="questionInput" placeholder="Ask your question"
-      style="width: 100%; padding: 5px; margin-bottom: 5px; box-sizing: border-box; border-radius: 8px;">
-    <button id="sendQuestionButton" style="width: 100%; padding: 5px; border-radius: 8px;">Send Question</button>
-    <button id="screenshotButton" style="width: 100%; padding: 5px; margin-top: 8px; border-radius: 8px;">Take Screenshot</button>
-    <div id="chatContent" style="margin-top: 8px; max-height: 150px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 5px;"></div>
-  `;
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: black;
+            color: #FFEB3B;
+            padding: 8px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        `;
+        header.innerHTML = `<span>MY APP</span>`;
+        overlay.appendChild(header);
 
-  document.body.appendChild(chatBox);
+        const tabContent = document.createElement('div');
+        tabContent.id = 'tabContent';
+        tabContent.style.marginTop = '10px';
+        overlay.appendChild(tabContent);
 
-  document.getElementById('closeChatBox').addEventListener('click', () => {
-    chatBox.style.display = 'none';
-  });
+        const tabButtons = document.createElement('div');
+        tabButtons.style.cssText = `
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: black;
+            padding: 8px 10px;
+            border-radius: 30px;
+        `;
+        const tabs = ['Q/A', 'clip', 'notes'];
+        tabs.forEach(tab => {
+            const button = document.createElement('button');
+            button.innerText = tab;
+            button.style.cssText = `
+                background: ${tab === 'Q/A' ? '#FFEB3B' : 'black'};
+                color: ${tab === 'Q/A' ? 'black' : 'white'};
+                padding: 6px 14px;
+                border: 2px solid #FFEB3B;
+                border-radius: 20px;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 12px;
+            `;
+            button.id = `${tab}-button`;
+            button.addEventListener('click', () => switchTab(tab));
+            tabButtons.appendChild(button);
+        });
+        overlay.appendChild(tabButtons);
 
-  document.getElementById('sendQuestionButton').addEventListener('click', () => {
-    const question = document.getElementById('questionInput').value;
-    if (question) {
-      sendQuestionToBackend(question);
-      // Do not clear the input field so previous questions stay there
+        switchTab('Q/A');
     }
-  });
 
-  document.getElementById('screenshotButton').addEventListener('click', takeScreenshot);
-}
+    function toggleOverlay() {
+        if (!overlay) return;
+        overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
+    }
 
-// Send question to backend and display it along with the answer
-function sendQuestionToBackend(question) {
-  const video = document.querySelector('video');
-  const videoUrl = window.location.href;
-  const timestamp = video ? video.currentTime : 0;
+    function removeOverlayAndButton() {
+        if (overlay) overlay.remove();
+        if (vnButton) vnButton.remove();
+        overlay = null;
+        vnButton = null;
+    }
 
-  const data = {
-    question: question,
-    videoUrl: videoUrl,
-    timestamp: timestamp,
-  };
+    function checkAndInject() {
+        const currentUrl = window.location.href;
+        if (currentUrl.includes('youtube.com/watch')) {
+            createVNButton();
+            createOverlay();
+        } else {
+            removeOverlayAndButton();
+        }
+    }
 
-  fetch('http://localhost:3000/ask-question', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
-    .then(response => response.json())
-    .then(data => {
-      const chatContent = document.getElementById('chatContent');
-      const formattedTime = formatTime(timestamp);
+    function switchTab(tabName) {
+        const tabContentDiv = document.getElementById('tabContent');
+        document.querySelectorAll('#my-overlay button').forEach(btn => {
+            if (['Q/A', 'clip', 'notes'].includes(btn.innerText)) {
+                btn.style.background = btn.innerText.toLowerCase() === tabName.toLowerCase() ? '#FFEB3B' : 'black';
+                btn.style.color = btn.innerText.toLowerCase() === tabName.toLowerCase() ? 'black' : 'white';
+            }
+        });
 
-      // Create the message block for the question and bot's answer
-      const messageBlock = document.createElement('div');
-      messageBlock.style.marginBottom = '8px';
-      messageBlock.innerHTML = `
-        <div><strong>You:</strong> ${question} 
-          <span class="timestamp" data-time="${timestamp}" style="float: right; color: #bbb; cursor: pointer; text-decoration: underline;">[${formattedTime}]</span>
-        </div>
-        <div><strong>Bot:</strong> ${data.answer}</div>
-      `;
+        if (tabName.toLowerCase() === 'q/a') {
+            tabContentDiv.innerHTML = `
+                <textarea id="questionInput" placeholder="Ask your question here..." style="width:100%;height:60px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+                <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+                    <button id="sendQuestionBtn" style="background:#FFEB3B;color:black;padding:6px 14px;font-weight:bold;border:2px solid black;border-radius:8px;font-size:12px;cursor:pointer;">Send</button>
+                </div>
+                <h4 style="margin-top:10px;">Answer:</h4>
+                <textarea id="answerOutput" readonly style="width:100%;height:80px;padding:8px;margin-top:4px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+            `;
 
-      // Append the message block to chat content (doesn't clear previous messages)
-      chatContent.appendChild(messageBlock);
-      chatContent.scrollTop = chatContent.scrollHeight;
-      addTimestampListeners();
-    })
-    .catch(error => {
-      console.error('Error:', error);
-    });
-}
+            document.getElementById('sendQuestionBtn').addEventListener('click', async () => {
+                const question = document.getElementById('questionInput').value.trim();
+                const answerBox = document.getElementById('answerOutput');
+                if (!question) {
+                    alert('Please enter a question!');
+                    return;
+                }
 
-// Take a screenshot of video and show in chat box
-function takeScreenshot() {
-  const video = document.querySelector('video');
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                try {
+                    answerBox.value = 'Loading...';
+                    const response = await fetch('http://localhost:5000/ask', { // Replace URL if needed
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ question }),
+                    });
 
-  const timestamp = video ? video.currentTime : 0;
-  const formattedTime = formatTime(timestamp);
-  const chatContent = document.getElementById('chatContent');
+                    if (!response.ok) {
+                        throw new Error('Server error');
+                    }
 
-  const screenshotImage = new Image();
-  screenshotImage.src = canvas.toDataURL('image/png');
-  screenshotImage.style.maxWidth = '100%';
-  screenshotImage.style.borderRadius = '4px';
-  screenshotImage.style.marginTop = '5px';
+                    const data = await response.json();
+                    answerBox.value = data.answer || 'No answer received.';
+                } catch (error) {
+                    console.error(error);
+                    answerBox.value = 'Error getting answer.';
+                }
+            });
+        } else if (tabName.toLowerCase() === 'clip') {
+            tabContentDiv.innerHTML = `
+                <textarea placeholder="Select or paste clip content here..." style="width:100%;height:60px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:6px;margin-top:8px;justify-content:center;">
+                    <button style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Analyze Clip</button>
+                    <button style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save Clip</button>
+                    <button style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Share Clip</button>
+                </div>
+                <h4 style="margin-top:10px;">Clip Analysis:</h4>
+                <textarea readonly style="width:100%;height:80px;padding:8px;margin-top:4px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+            `;
+        } else if (tabName.toLowerCase() === 'notes') {
+            tabContentDiv.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+                    <div style="display:flex;gap:6px;justify-content:center;">
+                        <button id="newNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">New Note</button>
+                        <button id="saveNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save</button>
+                        <button id="deleteNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Delete</button>
+                        <button id="exportNotesBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Export Notes</button>
+                    </div>
+                    <textarea id="notesDisplay" readonly style="width:100%;height:60px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;">- Meeting Notes\n- Project Ideas\n- Research Notes</textarea>
+                    <textarea id="noteInput" placeholder="Note Content..." style="width:100%;height:60px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+                </div>
+            `;
 
-  const messageBlock = document.createElement('div');
-  messageBlock.style.marginBottom = '10px';
-  messageBlock.innerHTML = `
-    <div><strong>You:</strong> Screenshot taken 
-      <span class="timestamp" data-time="${timestamp}" style="float: right; color: #bbb; cursor: pointer; text-decoration: underline;">[${formattedTime}]</span>
-    </div>
-  `;
-  messageBlock.appendChild(screenshotImage);
-  chatContent.appendChild(messageBlock);
-  chatContent.scrollTop = chatContent.scrollHeight;
-  addTimestampListeners();
+            document.getElementById('newNoteBtn').addEventListener('click', () => {
+                document.getElementById('noteInput').value = ''; // Clear current input field
+                document.getElementById('noteInput').focus();
+            });
 
-  canvas.toBlob((blob) => {
-    const formData = new FormData();
-    formData.append('screenshot', blob, 'screenshot.png');
-    formData.append('videoUrl', window.location.href);
-    formData.append('timestamp', timestamp);
+            document.getElementById('saveNoteBtn').addEventListener('click', () => {
+                const noteContent = document.getElementById('noteInput').value.trim();
+                if (noteContent) {
+                    // Save the note (for now just in localStorage)
+                    const existingNotes = JSON.parse(localStorage.getItem('notes')) || [];
+                    existingNotes.push(noteContent);
+                    localStorage.setItem('notes', JSON.stringify(existingNotes));
 
-    fetch('http://localhost:3000/upload-screenshot', {
-      method: 'POST',
-      body: formData,
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Screenshot uploaded:', data);
-      })
-      .catch(error => {
-        console.error('Error uploading screenshot:', error);
-      });
-  });
-}
+                    // Display updated notes
+                    document.getElementById('notesDisplay').value = existingNotes.join('\n');
+                    document.getElementById('noteInput').value = ''; // Clear input
+                } else {
+                    alert("Please enter some content for the note!");
+                }
+            });
 
-// Format time (seconds) to MM:SS
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
+            document.getElementById('deleteNoteBtn').addEventListener('click', () => {
+                // Clear all notes (both UI and localStorage)
+                localStorage.removeItem('notes');
+                document.getElementById('notesDisplay').value = '';
+            });
 
-// Make timestamps clickable
-function addTimestampListeners() {
-  const timestamps = document.querySelectorAll('.timestamp');
-  timestamps.forEach(span => {
-    span.addEventListener('click', () => {
-      const time = parseFloat(span.dataset.time);
-      const video = document.querySelector('video');
-      if (video && !isNaN(time)) {
-        video.currentTime = time;
-        video.play();
-      }
-    });
-  });
-}
+            document.getElementById('exportNotesBtn').addEventListener('click', () => {
+                const notes = JSON.parse(localStorage.getItem('notes')) || [];
+                const blob = new Blob([notes.join('\n')], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'notes.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
 
-// Setup overlay when video is ready
-function setupChatOverlay() {
-  const video = document.querySelector('video');
-  if (!video) return;
+            // Load existing notes when switching to the Notes tab
+            const existingNotes = JSON.parse(localStorage.getItem('notes')) || [];
+            document.getElementById('notesDisplay').value = existingNotes.join('\n');
+        }
+    }
 
-  resetChatBox();
-  createVNIcon();
-  createChatBox();
+    let lastUrl = location.href;
+    setInterval(() => {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            checkAndInject();
+        }
+    }, 1000);
 
-  video.addEventListener('pause', () => {
-    const chatBox = document.getElementById('chatOverlay');
-    if (chatBox) chatBox.style.display = 'block';
-  });
-
-  video.addEventListener('ended', () => {
-    const chatBox = document.getElementById('chatOverlay');
-    if (chatBox) chatBox.style.display = 'none';
-  });
-}
-
-// Watch for URL/video changes
-let lastUrl = location.href;
-const observer = new MutationObserver(() => {
-  const currentUrl = location.href;
-  if (currentUrl !== lastUrl) {
-    lastUrl = currentUrl;
-    setupChatOverlay();
-  }
-});
-
-observer.observe(document, { subtree: true, childList: true });
-
-// Initial load setup
-window.addEventListener('load', setupChatOverlay);
-
-
-
-
+    checkAndInject();
+})();
