@@ -1,10 +1,9 @@
 (function () {
     let overlay = null;
     let vnButton = null;
+    let lastUrl = location.href;
 
     function createVNButton() {
-        if (vnButton) return;
-
         vnButton = document.createElement('button');
         vnButton.id = 'vn-button';
         vnButton.innerText = 'VN';
@@ -29,8 +28,6 @@
     }
 
     function createOverlay() {
-        if (overlay) return;
-
         overlay = document.createElement('div');
         overlay.id = 'my-overlay';
         overlay.style.cssText = `
@@ -83,6 +80,7 @@
             padding: 8px 10px;
             border-radius: 30px;
         `;
+
         const tabs = ['Q/A', 'clip', 'notes'];
         tabs.forEach(tab => {
             const button = document.createElement('button');
@@ -101,8 +99,8 @@
             button.addEventListener('click', () => switchTab(tab));
             tabButtons.appendChild(button);
         });
-        overlay.appendChild(tabButtons);
 
+        overlay.appendChild(tabButtons);
         switchTab('Q/A');
     }
 
@@ -112,16 +110,21 @@
     }
 
     function removeOverlayAndButton() {
-        if (overlay) overlay.remove();
-        if (vnButton) vnButton.remove();
-        overlay = null;
-        vnButton = null;
+        if (overlay) {
+            overlay.remove();
+            overlay = null;
+        }
+        if (vnButton) {
+            vnButton.remove();
+            vnButton = null;
+        }
     }
 
     function checkAndInject() {
         const currentUrl = window.location.href;
         if (currentUrl.includes('youtube.com/watch')) {
-            localStorage.removeItem('notes'); // <<== Add this line
+            removeOverlayAndButton();  // Remove previous overlay and button
+            localStorage.removeItem('notes');  // Clear notes (if you want fresh)
             createVNButton();
             createOverlay();
         } else {
@@ -158,17 +161,11 @@
 
                 try {
                     answerBox.value = 'Loading...';
-                    const response = await fetch('http://localhost:5000/ask', { // Replace URL if needed
+                    const response = await fetch('http://localhost:5000/ask', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ question }),
                     });
-
-                    if (!response.ok) {
-                        throw new Error('Server error');
-                    }
 
                     const data = await response.json();
                     answerBox.value = data.answer || 'No answer received.';
@@ -197,34 +194,30 @@
                         <button id="deleteNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Delete</button>
                         <button id="exportNotesBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Export Notes</button>
                     </div>
-                    <textarea id="notesDisplay" readonly style="width:100%;height:60px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;">- Meeting Notes\n- Project Ideas\n- Research Notes</textarea>
+                    <textarea id="notesDisplay" readonly style="width:100%;height:60px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
                     <textarea id="noteInput" placeholder="Note Content..." style="width:100%;height:60px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
                 </div>
             `;
 
             document.getElementById('newNoteBtn').addEventListener('click', () => {
-                document.getElementById('noteInput').value = ''; // Clear current input field
+                document.getElementById('noteInput').value = '';
                 document.getElementById('noteInput').focus();
             });
 
             document.getElementById('saveNoteBtn').addEventListener('click', () => {
                 const noteContent = document.getElementById('noteInput').value.trim();
                 if (noteContent) {
-                    // Save the note (for now just in localStorage)
                     const existingNotes = JSON.parse(localStorage.getItem('notes')) || [];
                     existingNotes.push(noteContent);
                     localStorage.setItem('notes', JSON.stringify(existingNotes));
-
-                    // Display updated notes
                     document.getElementById('notesDisplay').value = existingNotes.join('\n');
-                    document.getElementById('noteInput').value = ''; // Clear input
+                    document.getElementById('noteInput').value = '';
                 } else {
                     alert("Please enter some content for the note!");
                 }
             });
 
             document.getElementById('deleteNoteBtn').addEventListener('click', () => {
-                // Clear all notes (both UI and localStorage)
                 localStorage.removeItem('notes');
                 document.getElementById('notesDisplay').value = '';
             });
@@ -240,13 +233,11 @@
                 URL.revokeObjectURL(url);
             });
 
-            // Load existing notes when switching to the Notes tab
             const existingNotes = JSON.parse(localStorage.getItem('notes')) || [];
             document.getElementById('notesDisplay').value = existingNotes.join('\n');
         }
     }
 
-    let lastUrl = location.href;
     setInterval(() => {
         if (location.href !== lastUrl) {
             lastUrl = location.href;
