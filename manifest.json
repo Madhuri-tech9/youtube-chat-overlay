@@ -1,33 +1,31 @@
 {
   "manifest_version": 3,
   "name": "YouTube Chat Overlay",
-  "description": "Overlay a chat window and capture video frames",
+  "description": "An overlay chat window for YouTube videos with Q/A, Clip, and Notes features.",
   "version": "1.0",
   "permissions": [
     "activeTab",
-    "scripting",
+    "storage",
     "tabs"
   ],
-  "action": {
-    "default_icon": {
-      "16": "images/icon-16.png",
-      "48": "images/icon-48.png",
-      "128": "images/icon-128.png"
-    }
-  },
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": "icons/icon.png"
   },
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["contentScript.js"],
-      "run_at": "document_idle"
+      "js": ["content.js"]
     }
   ],
+  "host_permissions": [
+    "http://localhost:5000/*"
+  ],
   "icons": {
-    "16": "images/icon-16.png",
-    "48": "images/icon-48.png",
-    "128": "images/icon-128.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }
