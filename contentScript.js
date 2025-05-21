@@ -23,9 +23,76 @@
             box-shadow: 0 0 6px rgba(0,0,0,0.4);
         `;
         document.body.appendChild(vnButton);
-        vnButton.addEventListener('click', toggleOverlay);
+ 
+        vnButton.addEventListener('click', () => {
+    // If overlay is visible, hide overlay and login box (toggle off)
+    if (overlay && overlay.style.display === 'block') {
+        overlay.style.display = 'none';
+        document.getElementById('login-box').style.display = 'none';
+        return;
     }
 
+    // Check if user is already logged in
+    const storedUsername = localStorage.getItem('vn-username');
+    const storedPassword = localStorage.getItem('vn-password');
+
+    if (storedUsername && storedPassword) {
+        // User already logged in - show overlay directly, no login box
+        document.getElementById('login-box').style.display = 'none';
+        overlay.style.display = 'block';
+
+        // Resume video if paused
+        const video = document.querySelector('video');
+        if (video) {
+            video.play();
+        }
+        return; 
+    }
+
+    // User not logged in yet - clear any old data and show login box
+    localStorage.removeItem('vn-username');
+    localStorage.removeItem('vn-password');
+
+    const loginBox = document.getElementById('login-box');
+    if (loginBox) {
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        if (usernameInput) usernameInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+        loginBox.style.display = 'block';
+    }
+
+    const video = document.querySelector('video');
+    if (video) {
+        video.pause();
+    }
+
+    // Your fetch call for video data...
+    const videoUrl = window.location.href;
+    const videoTitle = document.title;
+
+    fetch('https://your-backend-url.com/video-info', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            videoUrl: videoUrl,
+            title: videoTitle,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Successfully sent video data to backend:', data);
+    })
+    .catch(error => {
+        console.error('Error sending video data to backend:', error);
+    });
+
+    toggleOverlay();
+});   
+    }
+    
     function createOverlay() {
         overlay = document.createElement('div');
         overlay.id = 'my-overlay';
@@ -62,6 +129,32 @@
         header.innerHTML = '<span>MY APP</span>';
         overlay.appendChild(header);
 
+            const logoutBtn = document.createElement('button');
+            logoutBtn.innerText = 'Logout';
+            logoutBtn.style.cssText = `
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        background: #FFEB3B;
+        color: black;
+        font-weight: bold;
+        border: 2px solid black;
+        border-radius: 12px;
+        padding: 4px 10px;
+        cursor: pointer;
+        font-size: 12px;
+        box-shadow: 0 0 4px rgba(0,0,0,0.3);
+    `;
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('vn-username');
+        overlay.style.display = 'none';
+        document.getElementById('login-box').style.display = 'none';
+        alert('Logged out! Click VN button to login again.');
+    });
+
+    overlay.appendChild(logoutBtn);
+
+
         const tabContent = document.createElement('div');
         tabContent.id = 'tabContent';
         tabContent.style.marginTop = '10px';
@@ -79,7 +172,77 @@
             padding: 8px 10px;
             border-radius: 30px;
         `;
+        createLoginBox();
 
+
+     function createLoginBox() {
+    const loginBox = document.createElement('div');
+    loginBox.id = 'login-box';
+    loginBox.style.cssText = `
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        background: white;
+        padding: 10px;
+        border: 2px solid #FFEB3B;
+        border-radius: 8px;
+        z-index: 10001;
+        display: none;
+        box-shadow: 0 0 6px rgba(0,0,0,0.3);
+        width: 200px;
+        font-size: 13px;
+        text-align: center;
+    `;
+
+   loginBox.innerHTML = `
+    <h4 style="margin: 0 0 8px;">Login</h4>
+    <input id="username" type="text" placeholder="Username"
+        style="width: 90%; height: 22px; margin-bottom: 2px; font-size: 12px;" />
+    <div id="username-error" style="color: red; font-size: 10px; height: 14px; margin-bottom: 6px;"></div>
+    <input id="password" type="password" placeholder="Password"
+        style="width: 90%; height: 22px; margin-bottom: 8px; font-size: 12px;" />
+    <button id="login-submit"
+        style="width: 60%; padding: 6px; background: #FFEB3B; border: none; font-weight: bold; cursor: pointer;">
+        Submit
+    </button>
+`;
+    document.body.appendChild(loginBox);
+
+ document.getElementById('login-submit').addEventListener('click', () => {
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const usernameError = document.getElementById('username-error');
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    const usernameRegex = /^[a-zA-Z0-9_]{3,15}$/;
+
+    if (!usernameRegex.test(username)) {
+        usernameError.textContent = 'Username must be 3-15 characters: letters, numbers, or underscores only.';
+        usernameInput.focus();
+        return;
+    } else {
+        usernameError.textContent = ''; // Clear error if valid
+    }
+
+    if (password === '') {
+        alert('Password cannot be empty');
+        passwordInput.focus();
+        return;
+    }
+
+    // If both are valid, save and continue
+    localStorage.setItem('vn-username', username);
+    localStorage.setItem('vn-password', password);
+    document.getElementById('login-box').style.display = 'none';
+    overlay.style.display = 'block';
+
+    const video = document.querySelector('video');
+    if (video) {
+        video.play();
+    }
+});
+     }
         const tabs = ['Q/A', 'clip', 'notes'];
         tabs.forEach(tab => {
             const button = document.createElement('button');
@@ -123,6 +286,7 @@
         const currentUrl = window.location.href;
         if (currentUrl.includes('youtube.com/watch')) {
             removeOverlayAndButton();
+
             localStorage.removeItem('notes');
             createVNButton();
             createOverlay();
