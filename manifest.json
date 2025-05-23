@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Chat Overlay",
+  "name": "QBOXAI",
   "description": "An overlay chat window for YouTube videos with Q/A, Clip, and Notes features.",
   "version": "1.0",
   "permissions": [
