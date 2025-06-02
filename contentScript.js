@@ -386,7 +386,6 @@
                     answerBox.value = ''; 
                 });
             }
-    
 
             // Detect video ID from URL
                 const currentVideoId = new URLSearchParams(window.location.search).get("v");
@@ -400,7 +399,7 @@
                 <div id="clipContent" style="width:100%;min-height:120px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;overflow:auto;background:white;"></div>
                 <div style="display:flex;gap:6px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
                     <button id="sendBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Send</button>
-                    <button style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save Clip</button>
+                    <button id="saveClipBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save Clip</button>
                     <button id="screenshotBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Screenshot</button>
                 </div>
                 <div id="backendReply" style="margin-top:10px;padding:8px;background:#e0f7fa;border-radius:6px;display:none;"></div>
@@ -409,7 +408,8 @@
             const clipContentDiv = document.getElementById('clipContent');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const sendBtn = document.getElementById('sendBtn');
-        
+            const saveClipBtn = document.getElementById('saveClipBtn');
+
             // Global clipData array
                 if (!window.clipData) window.clipData = [];
         
@@ -421,11 +421,14 @@
                 const answer = container.querySelector('textarea[readonly]').value;
                 return { image: img.src, question, answer };
                 });
+            // 🔁 Save to localStorage
+                localStorage.setItem('clipData', JSON.stringify(window.clipData));
             };
         
             // Load saved clips
                 const loadSavedClips = () => {
-                window.clipData.forEach(clip => {
+                if (window.clipData.length === 0) return;
+                const clip = window.clipData[0];
                 const container = document.createElement('div');
                 container.style.marginTop = '10px';
         
@@ -464,9 +467,13 @@
                     container.appendChild(questionTextarea);
                     container.appendChild(answerTextarea);
                     clipContentDiv.appendChild(container);
-                });
+                
             };
         
+            saveClipBtn.addEventListener('click', () => {
+           saveClipData();
+           alert('Clips saved successfully!');
+    });
             // Initial load
             loadSavedClips();
         
@@ -478,6 +485,8 @@
                     return;
                 }
         
+             // Clear previous clip content
+                clipContentDiv.innerHTML = '';
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -529,15 +538,21 @@
                 sendBtn.addEventListener('click', () => {
                 const video = document.querySelector('video');
                 const timestamp = video ? Math.floor(video.currentTime) : null;  
-                
-                    const payload = window.clipData.map(clip => ({
-                    title: document.title,  
-                    video_url: window.location.href,  
-                    timestamp: timestamp,  
-                    image: clip.image,
-                    question: clip.question
-                }));
-            
+                const payload = window.clipData
+                .filter(clip => clip.question.trim() !== '')
+                .map(clip => ({
+                title: document.title,
+                video_url: window.location.href,
+                timestamp: timestamp,
+                image: clip.image,
+                question: clip.question
+        }));
+
+                if (payload.length === 0) {
+                alert('Please enter at least one question.');
+                return;
+        }
+
                 fetch('http://localhost:5000/sendClips', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -545,16 +560,29 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    const reply = document.getElementById('backendReply');
-                    reply.textContent = data.message;
-                    reply.style.display = 'block';
+                    if (data.answers && Array.isArray(data.answers)) {
+                const containers = clipContentDiv.querySelectorAll('div');
+                data.answers.forEach((answer, index) => {
+                const container = containers[index];
+                if (container) {
+                const answerTextarea = container.querySelector('textarea[readonly]');
+                if (answerTextarea) {
+                answerTextarea.value = answer;
+                saveClipData();
+            }
+        }
+    });
+            // Save updated answers to clipData
+                saveClipData();
+        } else {
+                alert('Unexpected response from backend');
+            }
                 })
                 .catch(error => {
                     console.error(error);
                 });
             });
             
-    
         }else if (tabName.toLowerCase() === 'notes') {
             tabContentDiv.innerHTML = `
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
