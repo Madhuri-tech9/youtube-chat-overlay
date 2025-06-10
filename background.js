@@ -44,7 +44,7 @@ function saveClipData(clip) {
 // Function to handle sending question to the backend
 async function sendQuestionToBackend(payload) {
   try {
-    const response = await fetch('http://localhost:5000/ask', {
+    const response = await fetch('http://127.0.0.1:8000/app1/ask-question/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -60,7 +60,7 @@ async function sendQuestionToBackend(payload) {
 // Function to handle saving notes
 async function saveNotes(note) {
   try {
-    const response = await fetch('http://localhost:5000/notes', {
+    const response = await fetch('http://127.0.0.1:8000/app1/ask-question/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(note),
