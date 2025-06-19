@@ -396,40 +396,6 @@
                 <textarea id="answerOutput" placeholder="Answer" readonly style="width:100%;height:80px;padding:8px;margin-top:4px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
             `;
 
-            function showQANotification(message, isError = false) {
-    // Remove any existing notification
-    const existing = document.getElementById('qaNotification');
-    if (existing) existing.remove();
-
-    const notification = document.createElement('div');
-    notification.id = 'qaNotification';
-    notification.textContent = message;
-
-    notification.style.cssText = `
-        background-color: white;
-        color: ${isError ? 'red' : 'black'};
-        padding: 10px 16px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        font-size: 14px;
-        border: 2px solid #FFEB3B;
-        margin-bottom: 8px;
-        transition: opacity 0.5s ease;
-        position: relative;
-        z-index: 1;
-        text-align: center;
-    `;
-
-    // Insert above the question input
-    const questionInput = document.getElementById('questionInput');
-    questionInput.parentNode.insertBefore(notification, questionInput);
-
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 500);
-    }, 3000);
-}
-
         // Reference the question input and answer box elements
             const questionInput = document.getElementById('questionInput');
             const answerBox = document.getElementById('answerOutput');
@@ -451,7 +417,8 @@
         }
         // Get current video timestamp
             const video = document.querySelector('video');
-            const videoUrl = window.location.href;
+            const videoId = new URLSearchParams(window.location.search).get("v");
+            const videoUrl = `https://youtu.be/${videoId}`;
             const timestampInSeconds = video ? Math.floor(video.currentTime) : null;
         // Format timestamp as mm:ss
             const minutes = Math.floor(timestampInSeconds / 60);
@@ -488,7 +455,7 @@
             const payload = {
             youtube_video_url: videoUrl,
             question: question,
-            time_stamp: timestampInSeconds
+            time_stamp: formattedTime
         };
         // Get JWT token from localStorage
             const token = localStorage.getItem('qboxai-access-token');
@@ -506,13 +473,16 @@
     });
             const data = await response.json();
         // Display the answer or fallback message
-            if (data.success) {
-    answerBox.value = data.answer || 'No answer received.';
+           if (data.success && data.data && data.data.answer) {
+    answerBox.value = data.data.answer;
     localStorage.setItem('savedAnswer', answerBox.value);
 } else {
-    showQANotification(data.message || 'Something went wrong.', true);
-    answerBox.value = '';
+    const backendMessage = data.message || 'Something went wrong.';
+    answerBox.value = backendMessage;
+    localStorage.setItem('savedAnswer', backendMessage);
+    showQANotification(backendMessage, true);
 }
+
     } catch (error) {
         console.error(error);
         answerBox.value = 'Error getting answer.';
