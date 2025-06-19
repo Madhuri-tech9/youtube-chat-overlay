@@ -457,22 +457,23 @@
             const minutes = Math.floor(timestampInSeconds / 60);
             const seconds = timestampInSeconds % 60;
             const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
             // Add clickable timestamp link
             const timestampContainer = document.getElementById('timestampContainer');
-if (timestampContainer && timestampInSeconds !== null) {
-    timestampContainer.innerHTML = '';
+        if (timestampContainer && timestampInSeconds !== null) {
+            timestampContainer.innerHTML = '';
 
-    const timestampLink = document.createElement('div');
-    timestampLink.textContent = `⏱️ ${formattedTime}`;
-    timestampLink.style.cssText = `
-        color: #1976D2;
-        font-weight: bold;
-        cursor: pointer;
-        text-decoration: underline;
-        margin-bottom: 6px;
-    `;
+            const timestampLink = document.createElement('div');
+            timestampLink.textContent = `⏱️ ${formattedTime}`;
+            timestampLink.style.cssText = `
+                color: #1976D2;
+                font-weight: bold;
+                cursor: pointer;
+                text-decoration: underline;
+                margin-bottom: 6px;
+            `;
 
-    timestampLink.addEventListener('click', () => {
+            timestampLink.addEventListener('click', () => {
         if (video) {
             video.currentTime = timestampInSeconds;
             video.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -480,8 +481,8 @@ if (timestampContainer && timestampInSeconds !== null) {
         }
     });
 
-    timestampContainer.appendChild(timestampLink);
-}
+            timestampContainer.appendChild(timestampLink);
+        }
 
        // Prepare payload for API request
             const payload = {
@@ -506,11 +507,12 @@ if (timestampContainer && timestampInSeconds !== null) {
             const data = await response.json();
         // Display the answer or fallback message
             if (data.success) {
-            answerBox.value = data.answer || 'No answer received.';
-            localStorage.setItem('savedAnswer', answerBox.value);
-        } else {
-            answerBox.value = data.message || 'Something went wrong.';
-        }
+    answerBox.value = data.answer || 'No answer received.';
+    localStorage.setItem('savedAnswer', answerBox.value);
+} else {
+    showQANotification(data.message || 'Something went wrong.', true);
+    answerBox.value = '';
+}
     } catch (error) {
         console.error(error);
         answerBox.value = 'Error getting answer.';
@@ -544,89 +546,115 @@ if (timestampContainer && timestampInSeconds !== null) {
                 </div>
                 <div id="backendReply" style="margin-top:10px;padding:8px;background:#e0f7fa;border-radius:6px;display:none;"></div>
             `;
-            // Reference UI elements
+        // Reference UI elements
             const clipContentDiv = document.getElementById('clipContent');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const sendBtn = document.getElementById('sendBtn');
 
-            // Initialize global clipData array if not present
-                if (!window.clipData) window.clipData = [];
+        // Initialize global clipData array if not present
+            if (!window.clipData) window.clipData = [];
         
-            // Save current clips to window.clipData & localStorage
-                const saveClipData = () => {
-    window.clipData = [...document.querySelectorAll('#clipContent > div')].map(container => {
-        const img = container.querySelector('img');
-        const question = container.querySelector('textarea:not([readonly])').value;
-        const answer = container.querySelector('textarea[readonly]').value;
-        const timestamp = container.getAttribute('data-timestamp') || 0;
-        return { image: img.src, question, answer, timestamp };
+        // Save current clips to window.clipData & localStorage
+            const saveClipData = () => {
+            const currentUrl = window.location.href;
+            window.clipData = [...document.querySelectorAll('#clipContent > div')].map(container => {
+            const img = container.querySelector('img');
+            const question = container.querySelector('textarea:not([readonly])').value;
+            const answer = container.querySelector('textarea[readonly]').value;
+            const timestamp = container.getAttribute('data-timestamp') || 0;
+            return { image: img.src, question, answer, timestamp };
+        });
+
+            chrome.storage.local.set({ 
+            clipData: window.clipData, 
+            clipVideoUrl: currentUrl 
+    }, () => {
+        if (chrome.runtime.lastError) {
+            console.error('Error saving clip data:', chrome.runtime.lastError);
+        } else {
+            console.log('Clip data saved for video:', currentUrl);
+        }
     });
-    localStorage.setItem('clipData', JSON.stringify(window.clipData));
 };
-        
-            // Load and display saved clip from localStorage
-                const loadSavedClips = () => {
-                if (window.clipData.length === 0) return;
-                const clip = window.clipData[0];
-                const container = document.createElement('div');
-                container.style.marginTop = '10px';
-        
-                const img = document.createElement('img');
-                img.src = clip.image;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '6px';
-                img.style.display = 'block';
-                img.style.marginBottom = '4px';
-                // Create clickable timestamp
-                const timestamp = clip.timestamp || 0;
-                const timestampLink = document.createElement('div');
-                timestampLink.textContent = `⏱️ ${formatTime(timestamp)}`;
-                timestampLink.style.cssText = `
-                    display: inline-block;
-                    margin-bottom: 8px;
-                    color: #1976D2;
-                    font-weight: bold;
-                    cursor: pointer;
-                    text-decoration: underline;
-                `;
-                timestampLink.addEventListener('click', () => {
-                const video = document.querySelector('video');
+ 
+        // Load and display saved clip from localStorage
+            const loadSavedClips = () => {
+            const currentUrl = window.location.href;
+
+            chrome.storage.local.get(['clipData', 'clipVideoUrl'], (result) => {
+            const savedUrl = result.clipVideoUrl;
+        if (savedUrl !== currentUrl) {
+        // Clear old data if video changed
+            chrome.storage.local.remove(['clipData', 'clipVideoUrl']);
+            console.log('New video detected. Old clip data cleared.');
+            return;
+        }
+
+        if (!result.clipData || result.clipData.length === 0) return;
+
+            window.clipData = result.clipData;
+            const clip = window.clipData[0];
+            const container = document.createElement('div');
+            container.style.marginTop = '10px';
+
+            const img = document.createElement('img');
+            img.src = clip.image;
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '6px';
+            img.style.display = 'block';
+            img.style.marginBottom = '4px';
+
+        // Timestamp click
+            const timestamp = clip.timestamp || 0;
+            const timestampLink = document.createElement('div');
+            timestampLink.textContent = `⏱️ ${formatTime(timestamp)}`;
+            timestampLink.style.cssText = `
+                display: inline-block;
+                margin-bottom: 8px;
+                color: #1976D2;
+                font-weight: bold;
+                cursor: pointer;
+                text-decoration: underline;
+            `;
+            timestampLink.addEventListener('click', () => {
+            const video = document.querySelector('video');
             if (video) {
                 video.currentTime = timestamp;
                 video.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 video.focus();
             }
         });
-                container.appendChild(timestampLink);
 
-                const questionTextarea = document.createElement('textarea');
-                questionTextarea.value = clip.question;
-                questionTextarea.placeholder = 'Ask a question about this screenshot...';
-                questionTextarea.style.width = '100%';
-                questionTextarea.style.height = '60px';
-                questionTextarea.style.padding = '6px';
-                questionTextarea.style.border = '2px solid #FFEB3B';
-                questionTextarea.style.borderRadius = '6px';
-                questionTextarea.style.boxSizing = 'border-box';
-                questionTextarea.style.marginBottom = '8px';
-                questionTextarea.addEventListener('input', saveClipData);
-        
-                const answerTextarea = document.createElement('textarea');
-                answerTextarea.readOnly = true;
-                answerTextarea.value = clip.answer || '';
-                answerTextarea.placeholder = 'Answer...';
-                answerTextarea.style.width = '100%';
-                answerTextarea.style.height = '60px';
-                answerTextarea.style.padding = '6px';
-                answerTextarea.style.border = '2px solid #FFEB3B';
-                answerTextarea.style.borderRadius = '6px';
-                answerTextarea.style.boxSizing = 'border-box';
-                answerTextarea.style.marginBottom = '8px';
-        
-            // Create delete button
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '❌';
-                deleteBtn.style.cssText = `
+            container.appendChild(timestampLink);
+
+            const questionTextarea = document.createElement('textarea');
+            questionTextarea.value = clip.question;
+            questionTextarea.placeholder = 'Ask a question about this screenshot...';
+            questionTextarea.style.width = '100%';
+            questionTextarea.style.height = '60px';
+            questionTextarea.style.padding = '6px';
+            questionTextarea.style.border = '2px solid #FFEB3B';
+            questionTextarea.style.borderRadius = '6px';
+            questionTextarea.style.boxSizing = 'border-box';
+            questionTextarea.style.marginBottom = '8px';
+
+            questionTextarea.addEventListener('input', saveClipData);
+
+            const answerTextarea = document.createElement('textarea');
+            answerTextarea.readOnly = true;
+            answerTextarea.value = clip.answer || '';
+            answerTextarea.placeholder = 'Answer...';
+            answerTextarea.style.width = '100%';
+            answerTextarea.style.height = '60px';
+            answerTextarea.style.padding = '6px';
+            answerTextarea.style.border = '2px solid #FFEB3B';
+            answerTextarea.style.borderRadius = '6px';
+            answerTextarea.style.boxSizing = 'border-box';
+            answerTextarea.style.marginBottom = '8px';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '❌';
+            deleteBtn.style.cssText = `
                 position: absolute;
                 top: -2px;
                 right: 6px;
@@ -641,23 +669,19 @@ if (timestampContainer && timestampInSeconds !== null) {
                 z-index: 2;
             `;
 
-            // Add delete functionality
-                deleteBtn.addEventListener('click', () => {
-                container.remove();
-                saveClipData();
-                showNotification('Screenshot deleted');
-            });
+            deleteBtn.addEventListener('click', () => {
+            container.remove();
+            saveClipData();
+            showNotification('Screenshot deleted');
+        });
 
-// Make container relatively positioned so delete button is correctly placed
-container.style.position = 'relative';
-
-// Append everything to container
-container.appendChild(deleteBtn);
-container.appendChild(img);
-container.appendChild(questionTextarea);
-container.appendChild(answerTextarea);
-clipContentDiv.appendChild(container);
-     
+            container.style.position = 'relative';
+            container.appendChild(deleteBtn);
+            container.appendChild(img);
+            container.appendChild(questionTextarea);
+            container.appendChild(answerTextarea);
+            clipContentDiv.appendChild(container);
+        });
             };
         // Load clips initially
             loadSavedClips();
@@ -671,18 +695,18 @@ clipContentDiv.appendChild(container);
             notifDiv.id = 'clipNotification';
             notifDiv.textContent = message;
             notifDiv.style.cssText = `
-            background-color: white;
-            color: ${isError ? 'red' : 'black'};
-            padding: 10px 16px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            font-size: 14px;
-            border: 2px solid #FFEB3B;
-            margin-bottom: 8px;
-            transition: opacity 0.5s ease;
-            position: relative;
-            z-index: 1;
-        `;
+                background-color: white;
+                color: ${isError ? 'red' : 'black'};
+                padding: 10px 16px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                font-size: 14px;
+                border: 2px solid #FFEB3B;
+                margin-bottom: 8px;
+                transition: opacity 0.5s ease;
+                position: relative;
+                z-index: 1;
+             `;
 
         // Insert at the top of clipContentDiv
             clipContentDiv.insertBefore(notifDiv, clipContentDiv.firstChild);
@@ -782,7 +806,7 @@ clipContentDiv.appendChild(container);
                     z-index: 2;
                 `;
 
-                // Add delete functionality
+            // Add delete functionality
                 deleteBtn.addEventListener('click', () => {
                 container.remove();
                 saveClipData();
@@ -799,17 +823,17 @@ clipContentDiv.appendChild(container);
             });
           
         // Convert base64 image to Blob for file upload
-            function dataURLtoBlob(dataurl) {
-            const arr = dataurl.split(',');
-            const mime = arr[0].match(/:(.*?);/)[1];
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8arr = new Uint8Array(n);
-            while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-            return new Blob([u8arr], { type: mime });
-        }
+                function dataURLtoBlob(dataurl) {
+                const arr = dataurl.split(',');
+                const mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+                return new Blob([u8arr], { type: mime });
+           }
         //Send clip + question to backend
                sendBtn.addEventListener('click', () => {
                const video = document.querySelector('video');
@@ -856,249 +880,278 @@ clipContentDiv.appendChild(container);
     });
 });
 
-    function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+            function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+
+        // Clear saved note if video has changed
+if (window.location.href !== lastVideoUrl) {
+    const oldVideoId = new URLSearchParams(lastVideoUrl.split('?')[1]).get('v');
+    if (oldVideoId) {
+        localStorage.removeItem(`unsavedNote_${oldVideoId}`);
+    }
+    lastVideoUrl = window.location.href;
 }
 
         }else if (tabName.toLowerCase() === 'notes') {
-        // Inject Notes UI
-            tabContentDiv.innerHTML = `
-            
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-                <div id="noteNotification" style="display:none;padding:6px;background:#dff0d8;color:#3c763d;border:1px solid #d6e9c6;border-radius:6px;text-align:center;font-size:12px;"></div>
-                <div style="display:flex;gap:6px;justify-content:center;">
-            <button id="newNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">New Note</button>
-            <button id="saveNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save</button>
+    tabContentDiv.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <div id="noteNotification" style="display:none;padding:6px;background:#dff0d8;color:#3c763d;border:1px solid #d6e9c6;border-radius:6px;text-align:center;font-size:12px;"></div>
+
+            <div style="display:flex;gap:6px;justify-content:center;">
+                <button id="newNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">New Note</button>
+                <button id="saveNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save</button>
+            </div>
+
+            <!-- Full Toolbar -->
+            <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;">
+                <button onclick="document.execCommand('bold')" style="font-weight:bold;padding:4px 8px;border:2px solid #FFEB3B;">B</button>
+                <button onclick="document.execCommand('italic')" style="font-style:italic;padding:4px 8px;border:2px solid #FFEB3B;">I</button>
+                <button onclick="document.execCommand('underline')" style="text-decoration:underline;padding:4px 8px;border:2px solid #FFEB3B;">U</button>
+                <button onclick="document.execCommand('insertUnorderedList')" style="padding:4px 8px;border:2px solid #FFEB3B;">• List</button>
+                <button onclick="document.execCommand('insertOrderedList')" style="padding:4px 8px;border:2px solid #FFEB3B;">1. List</button>
+
+            <select onchange="document.execCommand('foreColor', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
+                <option value="">Text Color</option>
+                <option value="black">Black</option>
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+                <option value="orange">Orange</option>
+            </select>
+
+            <select onchange="document.execCommand('fontSize', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
+                <option value="">Font Size</option>
+                <option value="1">Very Small</option>
+                <option value="2">Small</option>
+                <option value="3">Normal</option>
+                <option value="4">Large</option>
+                <option value="5">Larger</option>
+                <option value="6">Extra Large</option>
+                <option value="7">Huge</option>
+            </select>
+
+            <select onchange="document.execCommand('fontName', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
+                <option value="">Font Family</option>
+                <option value="Arial">Arial</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Tahoma">Tahoma</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Verdana">Verdana</option>
+            </select>
+
+            <select onchange="document.execCommand('hiliteColor', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
+                <option value="">Highlight</option>
+                <option value="yellow">Yellow</option>
+                <option value="lightgreen">Green</option>
+                <option value="lightblue">Blue</option>
+                <option value="pink">Pink</option>
+            </select>
         </div>
+
             <div id="noteInput" contenteditable="true" 
-     style="min-height:60px;width:100%;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;background:white;color:black;">
-    Type your note here...
-</div>
-            <div style="font-size: 11px; color: gray;">(You can use Ctrl+B for bold, Ctrl+I for italics)</div>
+                style="min-height:60px;width:100%;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;background:white;color:black;">
+                Type your note here...
+            </div>
+
             <div id="notesDisplay" style="width:100%;height:200px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;overflow-y:auto;background-color:white;color:black;"></div>
         </div>
     `;
 
-    function showNoteMessage(message, isError = false) {
-    // Remove existing notification if present
-    const existing = document.getElementById('noteNotification');
-    if (existing) existing.remove();
+                const noteInput = document.getElementById('noteInput');
+                const videoId = new URLSearchParams(window.location.search).get('v');
+                const unsavedKey = `unsavedNote_${videoId}`;
 
-    const noteNotification = document.createElement('div');
-    noteNotification.id = 'noteNotification';
-    noteNotification.textContent = message;
+                function showNoteMessage(message, isError = false) {
+                const existing = document.getElementById('noteNotification');
+            if (existing) existing.remove();
 
-    noteNotification.style.cssText = `
-        background-color: white;
-        color: ${isError ? 'red' : 'black'};
-        padding: 10px 16px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        font-size: 14px;
-        border: 2px solid #FFEB3B;
-        margin-bottom: 8px;
-        transition: opacity 0.5s ease;
-        position: relative;
-        z-index: 1;
-        text-align: center;
-    `;
+                const noteNotification = document.createElement('div');
+        noteNotification.id = 'noteNotification';
+        noteNotification.textContent = message;
+        noteNotification.style.cssText = `
+            background-color: white;
+            color: ${isError ? 'red' : 'black'};
+            padding: 10px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            border: 2px solid #FFEB3B;
+            margin-bottom: 8px;
+            transition: opacity 0.5s ease;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        `;
+        const container = tabContentDiv.querySelector('div');
+        container.insertBefore(noteNotification, container.children[1]);
+        setTimeout(() => {
+            noteNotification.style.opacity = '0';
+            setTimeout(() => noteNotification.remove(), 500);
+        }, 3000);
+    }
 
-    // Insert it above the noteInput
-    const container = tabContentDiv.querySelector('div');
-    container.insertBefore(noteNotification, container.children[1]);
+   noteInput.addEventListener('keydown', (e) => {
+    // Prevent YouTube shortcuts from triggering while typing
+    e.stopPropagation();
 
-    setTimeout(() => {
-        noteNotification.style.opacity = '0';
-        setTimeout(() => noteNotification.remove(), 500);
-    }, 3000);
-}
-
-        // Load and display saved notes from the backend
-            loadSavedNotes();
-            const videoId = new URLSearchParams(window.location.search).get('v');
-            const unsavedKey = `unsavedNote_${videoId}`;
-            const noteInput = document.getElementById('noteInput');
-
-noteInput.addEventListener('keydown', (e) => {
-    const blockedKeys = ['f', 'F', 'i', 'I', 't', 'T', 'm', 'M'];
-
-    // Allow Ctrl+B and Ctrl+I for formatting
-    if (e.ctrlKey && (e.key === 'b' || e.key === 'i')) {
-        document.execCommand(e.key === 'b' ? 'bold' : 'italic', false, null);
+    // Prevent 't' key (and others) from triggering YouTube behavior
+    const isCharKey = e.key.length === 1;
+    if (isCharKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
+        // Manually insert character (optional fallback)
+        document.execCommand('insertText', false, e.key);
         return;
     }
 
-    // Block YouTube shortcuts only when inside noteInput
-    if (blockedKeys.includes(e.key)) {
-        e.stopPropagation(); // Block key from reaching YouTube
-    }
-
-    // Fix for Spacebar: only stop propagation, don't prevent default
-    if (e.key === ' ') {
-        e.stopPropagation(); // prevent play/pause
-        // allow space to be typed by not calling e.preventDefault()
-    }
-
-    // Optional: prevent default behavior of Tab (if needed)
-    if (e.key === 'Tab') {
-        e.preventDefault(); // prevent switching focus
-        // You can also add custom tab indent logic if you want
+    // Handle formatting shortcuts
+    if (e.ctrlKey) {
+        if (e.key === 'b') {
+            document.execCommand('bold');
+            e.preventDefault();
+        } else if (e.key === 'i') {
+            document.execCommand('italic');
+            e.preventDefault();
+        } else if (e.key === 'u') {
+            document.execCommand('underline');
+            e.preventDefault();
+        }
     }
 });
 
-        // Load unsaved note from localStorage
-            noteInput.innerHTML = localStorage.getItem(unsavedKey) || '';
-        // Save draft to localStorage while typing
-            noteInput.addEventListener('input', (e) => {
-           localStorage.setItem(unsavedKey, e.target.innerHTML);
-        });
+    const saved = localStorage.getItem(unsavedKey);
+if (saved && saved !== 'Type your note here...') {
+    noteInput.innerHTML = saved;
+} else {
+    noteInput.innerHTML = 'Type your note here...';
+}
 
-        // Clear the note input when "New Note" is clicked
-            document.getElementById('newNoteBtn').addEventListener('click', () => {
-            noteInput.innerHTML = '';
-            noteInput.focus();
-            localStorage.removeItem(unsavedKey);
-        });
+    noteInput.addEventListener('input', (e) => {
+        localStorage.setItem(unsavedKey, e.target.innerHTML);
+    });
 
-        // Save the note to the backend when "Save" is clicked
-            document.getElementById('saveNoteBtn').addEventListener('click', async () => {
-            const token = localStorage.getItem('qboxai-access-token');
-                if (!token) {
-                    showNoteMessage('Please login to save notes.', true);
-                return;
-            }
+    document.getElementById('newNoteBtn').addEventListener('click', () => {
+        noteInput.innerHTML = '';
+        noteInput.focus();
+        localStorage.removeItem(unsavedKey);
+    });
 
-           const noteContent = noteInput.innerHTML.trim();
-                if (!noteContent) {
-                    showNoteMessage("Please enter some content for the note!", true);
-                 return;
-             }
+    document.getElementById('saveNoteBtn').addEventListener('click', async () => {
+        const token = localStorage.getItem('qboxai-access-token');
+        if (!token) {
+            showNoteMessage('Please login to save notes.', true);
+            return;
+        }
 
-            const videoUrl = window.location.href;
-            const video = document.querySelector('video');
-            const timestampSeconds = video ? Math.floor(video.currentTime) : 0;
+        const noteContent = noteInput.innerHTML.trim();
+        if (!noteContent) {
+            showNoteMessage("Please enter some content for the note!", true);
+            return;
+        }
 
-        //Prepare the payload for POST request
-            const noteData = {
+        const videoUrl = window.location.href;
+        const video = document.querySelector('video');
+        const seconds = video ? Math.floor(video.currentTime) : 0;
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        const timeStampFormatted = `${minutes}:${remainingSeconds}`;
+
+        const noteData = {
             youtube_video_url: videoUrl,
             notes: noteContent,
-            time_stamp: timestampSeconds  
+            time_stamp: timeStampFormatted
         };
 
-            try {
-                const response = await fetch('http://127.0.0.1:8000/app1/create-note/', {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/app1/create-note/', {
                 method: 'POST',
                 headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(noteData)
             });
 
             if (response.ok) {
+                const result = await response.json();
                 showNoteMessage('Note saved successfully!');
-                noteInput.innerHTML = '';
-                localStorage.removeItem(unsavedKey);
-                loadSavedNotes();
+noteInput.innerHTML = '';
+localStorage.removeItem(unsavedKey);
+const newNote = result.data;
+
+setTimeout(() => {
+    displayNotes([newNote]);
+}, 0);
+
             } else {
                 const errorData = await response.json();
                 showNoteMessage('Failed to save note! ' + (errorData.message || ''), true);
             }
         } catch (error) {
-                console.error('Error:', error);
-                showNoteMessage('Something went wrong while saving the note.', true);
-            }
-        });
+            console.error('Error:', error);
+            showNoteMessage('Something went wrong while saving the note.', true);
+        }
+    });
 
-        function displayNotes(notes) {
+    function displayNotes(notes) {
         const notesDisplayDiv = document.getElementById('notesDisplay');
         notesDisplayDiv.innerHTML = '';
 
         function formatSecondsToTimestamp(seconds) {
-        seconds = Number(seconds);
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return `${m}:${s < 10 ? '0' : ''}${s}`;
-      }
+            seconds = Number(seconds);
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
 
         if (!notes || notes.length === 0) {
-        notesDisplayDiv.innerHTML = '<p style="color:gray;text-align:center;">No notes available.</p>';
-        return;
-      }
+            notesDisplayDiv.innerHTML = '<p style="color:gray;text-align:center;">No notes available.</p>';
+            return;
+        }
 
         notes.forEach(note => {
-        const timeFormatted = formatSecondsToTimestamp(note.time_stamp);
-        const noteDiv = document.createElement('div');
-        noteDiv.style.cssText = 'margin-bottom: 16px; padding:8px; border:1px solid #ccc; border-radius:8px;';
+            const timeFormatted = formatSecondsToTimestamp(note.time_stamp);
+            const noteDiv = document.createElement('div');
+            noteDiv.style.cssText = 'margin-bottom: 16px; padding:8px; border:1px solid #ccc; border-radius:8px;';
 
-        // ⏱️ Timestamp link
-        const timestampLink = document.createElement('div');
-        timestampLink.textContent = `⏱️ ${timeFormatted}`;
-        timestampLink.style.cssText = `
-            color: #1976D2;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: underline;
-            margin-bottom: 6px;
-        `;
-        timestampLink.addEventListener('click', () => {
-            const video = document.querySelector('video');
-            if (video) {
-                video.currentTime = note.time_stamp;
-                video.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                video.focus();
-            }
-        });
-
-        const noteContent = document.createElement('p');
-        noteContent.textContent = note.notes;
-
-        noteDiv.appendChild(timestampLink);
-        noteDiv.appendChild(noteContent);
-        notesDisplayDiv.appendChild(noteDiv);
-    });
-}
-
-        // Fetch saved notes from the backend and call displayNotes()
-            async function loadSavedNotes() {
-            const token = localStorage.getItem('qboxai-access-token');
-                if (!token) {
-                    showNoteMessage('Please login to view saved notes.', true);
-                return;
-            }
-                const videoUrl = window.location.href;
-                const encodedVideoUrl = encodeURIComponent(videoUrl);
-                try {
-                    const response = await fetch(`http://127.0.0.1:8000/app1/create-note/?youtube_video_url=${encodedVideoUrl}`, {
-                    headers: {
-                    'Authorization': `Bearer ${token}`
+            const timestampLink = document.createElement('div');
+            timestampLink.textContent = `⏱️ ${timeFormatted}`;
+            timestampLink.style.cssText = `
+                color: #1976D2;
+                font-weight: bold;
+                cursor: pointer;
+                text-decoration: underline;
+                margin-bottom: 6px;
+            `;
+            timestampLink.addEventListener('click', () => {
+                const video = document.querySelector('video');
+                if (video) {
+                    video.currentTime = note.time_stamp;
+                    video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    video.focus();
                 }
             });
-                    const data = await response.json(); 
-                    let notes = [];
-                    if (Array.isArray(data.notes)) {
-                    notes = data.notes;
-                    } else if (data.notes) {
-                    notes = [data.notes];
-                }
 
-                        displayNotes(notes);
-                    }   catch (error) {
-                        console.error("Error loading saved notes:", error);
-                        showNoteMessage("Could not load saved notes.", true);
-                    }
-                }
-            }
+            const noteContent = document.createElement('p');
+            noteContent.innerHTML = note.notes;
+
+            noteDiv.appendChild(timestampLink);
+            noteDiv.appendChild(noteContent);
+            notesDisplayDiv.appendChild(noteDiv);
+        });
+    }
+}
         }
-                    setInterval(() => {
-                    if (location.href !== lastUrl) {
-                    lastUrl = location.href;
-                    checkAndInject();
-                }
-            }, 1000);
+                setInterval(() => {
+                if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                checkAndInject();
+            }
+        }, 1000);
 
-                    checkAndInject();
+                checkAndInject();
             })();

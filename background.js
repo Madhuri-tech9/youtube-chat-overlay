@@ -75,3 +75,5 @@ async function saveNotes(note) {
     console.error('Error saving note:', error);
   }
 }
+
+
