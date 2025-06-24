@@ -387,14 +387,23 @@
             const savedAnswer = localStorage.getItem('savedAnswer') || '';
         // Inject Q/A tab content with question textarea, send button, and answer display box
             tabContentDiv.innerHTML = `
-                <textarea id="questionInput" placeholder="Ask your question here..." style="width:100%;height:60px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
-                <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-                    <button id="sendQuestionBtn" style="background:#FFEB3B;color:black;padding:6px 14px;font-weight:bold;border:2px solid black;border-radius:8px;font-size:12px;cursor:pointer;">Send</button>
-                </div>
-                <div id="timestampContainer" style="margin-top:10px;"></div>
-                <h4>Answer:</h4>
-                <textarea id="answerOutput" placeholder="Answer" readonly style="width:100%;height:80px;padding:8px;margin-top:4px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+         <textarea id="questionInput" placeholder="Ask your question here..." style="width:100%;height:60px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+<div style="display:flex;justify-content:flex-end;margin-top:8px;">
+    <button id="sendQuestionBtn" style="background:#FFEB3B;color:black;padding:6px 14px;font-weight:bold;border:2px solid black;border-radius:8px;font-size:12px;cursor:pointer;">Send</button>
+</div>
+<div id="timestampContainer" style="margin-top:10px;"></div>
+<div style="flex-grow:1;display:flex;flex-direction:column;">
+    <h4 style="margin-top:8px;margin-bottom:4px;">Answer:</h4>
+    <textarea id="answerOutput" placeholder="Answer" readonly
+        style="flex-grow:1;width:100%;min-height:120px;padding:8px;border-radius:8px;
+        border:2px solid #FFEB3B;box-sizing:border-box;resize: vertical;overflow:auto;">
+    </textarea>
+</div>
             `;
+            tabContentDiv.style.display = 'flex';
+tabContentDiv.style.flexDirection = 'column';
+tabContentDiv.style.height = '100%';
+
 
         // Reference the question input and answer box elements
             const questionInput = document.getElementById('questionInput');
@@ -506,7 +515,7 @@
             }
             
 
-        }   else if (tabName.toLowerCase() === 'clip') {
+        }  else if (tabName.toLowerCase() === 'clip') {
             // Inject UI for Clip tab
             tabContentDiv.innerHTML = `
                 <div id="clipContent" style="width:100%;min-height:120px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;overflow:auto;background:white;"></div>
@@ -570,6 +579,8 @@
             const img = document.createElement('img');
             img.src = clip.image;
             img.style.maxWidth = '100%';
+            img.style.maxHeight = '150px';
+            img.style.objectFit = 'cover';
             img.style.borderRadius = '6px';
             img.style.display = 'block';
             img.style.marginBottom = '4px';
@@ -642,7 +653,7 @@
             deleteBtn.addEventListener('click', () => {
             container.remove();
             saveClipData();
-            showNotification('Screenshot deleted');
+            showNotification('Deleted from UI only – not removed from server');
         });
 
             container.style.position = 'relative';
@@ -697,6 +708,7 @@
         
         // Clear previous clip content
             clipContentDiv.innerHTML = '';
+
         // Capture video frame
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -704,12 +716,13 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageUrl = canvas.toDataURL('image/png');
+
         // Create UI for image + input
+        const timestamp = Math.floor(video.currentTime);
             const container = document.createElement('div');
             container.style.marginTop = '10px';
-            const img = document.createElement('img');
+             container.setAttribute('data-timestamp', timestamp);
         // Add timestamp element
-            const timestamp = Math.floor(video.currentTime);
             const timestampLink = document.createElement('div');
             timestampLink.textContent = `⏱️ ${formatTime(timestamp)}`;
             timestampLink.style.cssText = `
@@ -730,12 +743,15 @@
 });
         container.appendChild(timestampLink);
 
+                const img = document.createElement('img');
                 img.src = imageUrl;
                 img.style.maxWidth = '100%';
+                img.style.maxHeight = '150px';
+                img.style.objectFit = 'cover';
                 img.style.borderRadius = '6px';
                 img.style.display = 'block';
                 img.style.marginBottom = '4px';
-        
+
                 const questionTextarea = document.createElement('textarea');
                 questionTextarea.placeholder = 'Ask a question about this screenshot...';
                 questionTextarea.style.width = '100%';
@@ -780,7 +796,7 @@
                 deleteBtn.addEventListener('click', () => {
                 container.remove();
                 saveClipData();
-                showNotification('Screenshot deleted');
+                showNotification('Deleted from UI only – not removed from server');
             });
 
                 container.style.position = 'relative'; 
@@ -826,20 +842,33 @@
                 formData.append('image', imageBlob, 'screenshot.png');
                 formData.append('question', firstClip.question);
 
-                fetch('http://127.0.0.1:8000/app1/cliptab/', {
-                method: 'POST',
-                headers: {
-            'Authorization': `Bearer ${token}`  
+                // ✅ Show notification immediately
+showNotification('Question sent...');
+
+// ✅ Freeze the Send button
+sendBtn.disabled = true;
+sendBtn.style.opacity = '0.5';
+sendBtn.style.cursor = 'not-allowed';
+sendBtn.textContent = 'Sending...';
+
+// ⏳ Wait for 5 seconds before sending the request
+setTimeout(() => {
+    fetch('http://127.0.0.1:8000/app1/cliptab/', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`
         },
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.success && data.data && data.data.answer) {
             const containers = clipContentDiv.querySelectorAll('div');
             const answerTextarea = containers[0].querySelector('textarea[readonly]');
             answerTextarea.value = data.data.answer;
             saveClipData();
+
+            showNotification('Answer received ✔');
         } else {
             showNotification('Unexpected response from backend.', true);
             console.log(data);
@@ -847,8 +876,16 @@
     })
     .catch(error => {
         console.error(error);
+        showNotification('Failed to fetch answer.', true);
+    })
+    .finally(() => {
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.textContent = 'Send';
     });
-});
+}, 5000);
+               })
 
             function formatTime(seconds) {
             const mins = Math.floor(seconds / 60);
@@ -856,94 +893,119 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
-
-        // Clear saved note if video has changed
-if (window.location.href !== lastVideoUrl) {
-    const oldVideoId = new URLSearchParams(lastVideoUrl.split('?')[1]).get('v');
-    if (oldVideoId) {
-        localStorage.removeItem(`unsavedNote_${oldVideoId}`);
-    }
-    lastVideoUrl = window.location.href;
-}
-
-        }else if (tabName.toLowerCase() === 'notes') {
+    }else if (tabName.toLowerCase() === 'notes') {
     tabContentDiv.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-            <div id="noteNotification" style="display:none;padding:6px;background:#dff0d8;color:#3c763d;border:1px solid #d6e9c6;border-radius:6px;text-align:center;font-size:12px;"></div>
+<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
 
-            <div style="display:flex;gap:6px;justify-content:center;">
-                <button id="newNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">New Note</button>
-                <button id="saveNoteBtn" style="background:#FFEB3B;color:black;padding:6px 10px;font-weight:bold;border:2px solid black;border-radius:10px;font-size:11px;cursor:pointer;">Save</button>
-            </div>
+    <div id="noteNotification" style="display:none;padding:6px;background:#dff0d8;color:#3c763d;border:1px solid #d6e9c6;border-radius:6px;text-align:center;font-size:12px;"></div>
 
-            <!-- Full Toolbar -->
-            <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;">
-                <button onclick="document.execCommand('bold')" style="font-weight:bold;padding:4px 8px;border:2px solid #FFEB3B;">B</button>
-                <button onclick="document.execCommand('italic')" style="font-style:italic;padding:4px 8px;border:2px solid #FFEB3B;">I</button>
-                <button onclick="document.execCommand('underline')" style="text-decoration:underline;padding:4px 8px;border:2px solid #FFEB3B;">U</button>
-                <button onclick="document.execCommand('insertUnorderedList')" style="padding:4px 8px;border:2px solid #FFEB3B;">• List</button>
-                <button onclick="document.execCommand('insertOrderedList')" style="padding:4px 8px;border:2px solid #FFEB3B;">1. List</button>
+    <div style="display:flex;gap:6px;justify-content:center;">
+        <button id="newNoteBtn" style="background:#FFEB3B;color:black;padding:4px 8px;font-weight:bold;border:2px solid black;border-radius:6px;font-size:10px;cursor:pointer;">New Note</button>
+        <button id="saveNoteBtn" style="background:#FFEB3B;color:black;padding:4px 8px;font-weight:bold;border:2px solid black;border-radius:6px;font-size:10px;cursor:pointer;">Save</button>
+    </div>
 
-            <select onchange="document.execCommand('foreColor', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
-                <option value="">Text Color</option>
-                <option value="black">Black</option>
-                <option value="red">Red</option>
-                <option value="blue">Blue</option>
-                <option value="green">Green</option>
-                <option value="orange">Orange</option>
-            </select>
+    <!-- Toolbar moved UP here -->
+    <div style="
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        background: #111;
+        padding: 6px 8px;
+        border-radius: 20px;
+        margin-top: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    ">
+      <button onclick="document.execCommand('bold')" title="Bold" style="background:none;border:none;color:#ccc;font-size:13px;cursor:pointer;"><b>B</b></button>
+      <button onclick="document.execCommand('italic')" title="Italic" style="background:none;border:none;color:#ccc;font-size:13px;cursor:pointer;"><i>I</i></button>
+      <button onclick="document.execCommand('strikeThrough')" title="Strikethrough" style="background:none;border:none;color:#ccc;font-size:13px;cursor:pointer;">S̶</button>
+      <button onclick="document.execCommand('formatBlock', false, 'pre')" title="Code Block" style="background:none;border:none;color:#ccc;font-size:12px;cursor:pointer;">&lt;/&gt;</button>
+      <button onclick="document.execCommand('insertOrderedList')" title="Numbered List" style="background:none;border:none;cursor:pointer;">
+        <img src="https://img.icons8.com/ios-filled/16/cccccc/numbered-list.png" alt="Numbered List"/>
+      </button>
+      <button onclick="document.execCommand('insertUnorderedList')" title="Bullet List" style="background:none;border:none;cursor:pointer;">
+        <img src="https://img.icons8.com/ios-filled/16/cccccc/bulleted-list.png" alt="Bullet List"/>
+      </button>
+      <button onclick="document.execCommand('hiliteColor', false, '#ccc')" title="Highlight Block" style="background:none;border:none;cursor:pointer;">
+        <div style="width:10px;height:10px;background:#ccc;border-radius:2px;"></div>
+      </button>
+    </div>
 
-            <select onchange="document.execCommand('fontSize', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
-                <option value="">Font Size</option>
-                <option value="1">Very Small</option>
-                <option value="2">Small</option>
-                <option value="3">Normal</option>
-                <option value="4">Large</option>
-                <option value="5">Larger</option>
-                <option value="6">Extra Large</option>
-                <option value="7">Huge</option>
-            </select>
+    <div id="noteInput"
+        contenteditable="true"
+        data-placeholder="Type your note..."
+        style="width:100%;height:60px;padding:8px;margin-top:4px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;overflow-y:auto;background:white;color:black;position:relative;">
+    </div>
 
-            <select onchange="document.execCommand('fontName', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
-                <option value="">Font Family</option>
-                <option value="Arial">Arial</option>
-                <option value="Courier New">Courier New</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Tahoma">Tahoma</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Verdana">Verdana</option>
-            </select>
+    <div id="notesDisplay" 
+        data-placeholder="Display notes..."
+        style="width:100%;height:80px;padding:8px;margin-top:4px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;overflow-y:auto;background-color:white;color:black;position:relative;">
+    </div>
 
-            <select onchange="document.execCommand('hiliteColor', false, this.value)" style="padding:4px;border:2px solid #FFEB3B;">
-                <option value="">Highlight</option>
-                <option value="yellow">Yellow</option>
-                <option value="lightgreen">Green</option>
-                <option value="lightblue">Blue</option>
-                <option value="pink">Pink</option>
-            </select>
-        </div>
+</div>
+`;
+    const style = document.createElement('style');
+style.textContent = `
+  #noteInput ol, #noteInput ul {
+    padding-left: 20px;
+    margin-left: 10px;
+  }
+`;
+style.textContent += `
+  #noteInput:empty:before {
+    content: attr(data-placeholder);
+    color: #888;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 12px;
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    pointer-events: none;
+  }
+`;
+document.head.appendChild(style);
 
-            <div id="noteInput" contenteditable="true" 
-                style="min-height:60px;width:100%;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;background:white;color:black;">
-                Type your note here...
-            </div>
 
-            <div id="notesDisplay" style="width:100%;height:200px;padding:8px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;overflow-y:auto;background-color:white;color:black;"></div>
-        </div>
-    `;
+    // 🟡 Add formatting button functionality
+    const toolbarCommands = [
+        { id: 'boldBtn', command: 'bold' },
+        { id: 'italicBtn', command: 'italic' },
+        { id: 'strikeBtn', command: 'strikeThrough' },
+        { id: 'codeBtn', command: 'formatBlock', value: 'pre' },
+        { id: 'orderedBtn', command: 'insertOrderedList' },
+        { id: 'unorderedBtn', command: 'insertUnorderedList' },
+        { id: 'yellowBtn', command: 'hiliteColor', value: 'yellow' },
+        { id: 'redBtn', command: 'foreColor', value: 'red' },
+        { id: 'blueBtn', command: 'foreColor', value: 'blue' },
+    ];
+
+    toolbarCommands.forEach(btn => {
+        const el = document.getElementById(btn.id);
+        if (el) {
+            el.addEventListener('click', () => {
+                document.execCommand(btn.command, false, btn.value || null);
+            });
+        }
+    });
 
                 const noteInput = document.getElementById('noteInput');
                 const videoId = new URLSearchParams(window.location.search).get('v');
                 const unsavedKey = `unsavedNote_${videoId}`;
 
-                function showNoteMessage(message, isError = false) {
-                const existing = document.getElementById('noteNotification');
+                // 🔁 Load saved notes from localStorage
+                const savedNotesKey = `savedNotes_${videoId}`;
+                let savedNotes = JSON.parse(localStorage.getItem(savedNotesKey)) || [];
+                displayNotes(savedNotes);
+
+
+            function showNoteMessage(message, isError = false) {
+            const existing = document.getElementById('noteNotification');
             if (existing) existing.remove();
 
                 const noteNotification = document.createElement('div');
-        noteNotification.id = 'noteNotification';
-        noteNotification.textContent = message;
-        noteNotification.style.cssText = `
+                noteNotification.id = 'noteNotification';
+                noteNotification.textContent = message;
+                noteNotification.style.cssText = `
             background-color: white;
             color: ${isError ? 'red' : 'black'};
             padding: 10px 16px;
@@ -968,6 +1030,11 @@ if (window.location.href !== lastVideoUrl) {
    noteInput.addEventListener('keydown', (e) => {
     // Prevent YouTube shortcuts from triggering while typing
     e.stopPropagation();
+
+    // ⛔️ Prevent spacebar from pausing video while typing
+    if (e.key === ' ') {
+        e.preventDefault();
+    }
 
     // Prevent 't' key (and others) from triggering YouTube behavior
     const isCharKey = e.key.length === 1;
@@ -994,15 +1061,17 @@ if (window.location.href !== lastVideoUrl) {
 });
 
     const saved = localStorage.getItem(unsavedKey);
-if (saved && saved !== 'Type your note here...') {
+    if (saved) {
     noteInput.innerHTML = saved;
 } else {
-    noteInput.innerHTML = 'Type your note here...';
+    noteInput.innerHTML= '';
 }
 
-    noteInput.addEventListener('input', (e) => {
-        localStorage.setItem(unsavedKey, e.target.innerHTML);
-    });
+   noteInput.addEventListener('input', () => {
+    localStorage.setItem(unsavedKey, noteInput.innerHTML);
+
+});
+
 
     document.getElementById('newNoteBtn').addEventListener('click', () => {
         noteInput.innerHTML = '';
@@ -1046,17 +1115,18 @@ if (saved && saved !== 'Type your note here...') {
                 body: JSON.stringify(noteData)
             });
 
-            if (response.ok) {
-                const result = await response.json();
-                showNoteMessage('Note saved successfully!');
-noteInput.innerHTML = '';
-localStorage.removeItem(unsavedKey);
-const newNote = result.data;
+          if (response.ok) {
+    const result = await response.json();
 
-setTimeout(() => {
-    displayNotes([newNote]);
-}, 0);
+    showNoteMessage('Note saved successfully!');
+    noteInput.innerHTML = '';
+    localStorage.removeItem(unsavedKey);
 
+    // Convert time_stamp to number just in case
+    const newNote = result.data;
+    savedNotes.push(newNote);
+    localStorage.setItem(savedNotesKey, JSON.stringify(savedNotes)); 
+    appendNote(newNote);
             } else {
                 const errorData = await response.json();
                 showNoteMessage('Failed to save note! ' + (errorData.message || ''), true);
@@ -1072,19 +1142,24 @@ setTimeout(() => {
         notesDisplayDiv.innerHTML = '';
 
         function formatSecondsToTimestamp(seconds) {
-            seconds = Number(seconds);
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            return `${m}:${s < 10 ? '0' : ''}${s}`;
-        }
+    if (typeof seconds === 'string' && seconds.includes(':')) {
+        const [min, sec] = seconds.split(':');
+        seconds = parseInt(min) * 60 + parseInt(sec);
+    }
+    seconds = Math.floor(Number(seconds)); 
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
 
-        if (!notes || notes.length === 0) {
-            notesDisplayDiv.innerHTML = '<p style="color:gray;text-align:center;">No notes available.</p>';
-            return;
-        }
+
+       if (!notes || notes.length === 0) {
+    notesDisplayDiv.innerHTML = '<p style="color:gray;text-align:center;">Display notes...</p>';
+    return;
+}
 
         notes.forEach(note => {
-            const timeFormatted = formatSecondsToTimestamp(note.time_stamp);
+            const timeFormatted = formatSecondsToTimestamp(Number(note.time_stamp));
             const noteDiv = document.createElement('div');
             noteDiv.style.cssText = 'margin-bottom: 16px; padding:8px; border:1px solid #ccc; border-radius:8px;';
 
@@ -1116,6 +1191,49 @@ setTimeout(() => {
     }
 }
         }
+        function appendNote(note) {
+    const notesDisplayDiv = document.getElementById('notesDisplay');
+
+    function formatSecondsToTimestamp(seconds) {
+    if (typeof seconds === 'string' && seconds.includes(':')) {
+        const [min, sec] = seconds.split(':');
+        seconds = parseInt(min) * 60 + parseInt(sec);
+    }
+    seconds = Math.floor(Number(seconds));
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+    const timeFormatted = formatSecondsToTimestamp(Number(note.time_stamp));
+    const noteDiv = document.createElement('div');
+    noteDiv.style.cssText = 'margin-bottom: 16px; padding:8px; border:1px solid #ccc; border-radius:8px;';
+
+    const timestampLink = document.createElement('div');
+    timestampLink.textContent = `⏱️ ${timeFormatted}`;
+    timestampLink.style.cssText = `
+        color: #1976D2;
+        font-weight: bold;
+        cursor: pointer;
+        text-decoration: underline;
+        margin-bottom: 6px;
+    `;
+    timestampLink.addEventListener('click', () => {
+        const video = document.querySelector('video');
+        if (video) {
+            video.currentTime = note.time_stamp;
+            video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            video.focus();
+        }
+    });
+
+    const noteContent = document.createElement('p');
+    noteContent.innerHTML = note.notes;
+
+    noteDiv.appendChild(timestampLink);
+    noteDiv.appendChild(noteContent);
+    notesDisplayDiv.appendChild(noteDiv);
+}
                 setInterval(() => {
                 if (location.href !== lastUrl) {
                 lastUrl = location.href;
@@ -1125,3 +1243,5 @@ setTimeout(() => {
 
                 checkAndInject();
             })();
+    
+    
