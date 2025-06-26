@@ -1268,7 +1268,7 @@ document.addEventListener(
         e.preventDefault();
       }
 
-      if (['t', 'i', 'f', 'j', 'k', 'l', 'm'].includes(key)) {
+      if (['t', 'i', 'f', 'j', 'k', 'l', 'm', 'c'].includes(key)) {
   e.stopImmediatePropagation();
   e.preventDefault();
   document.execCommand('insertText', false, key);
