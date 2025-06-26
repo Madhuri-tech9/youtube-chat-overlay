@@ -199,14 +199,14 @@
     // Insert HTML content: heading, email & password inputs, error message div, and submit button
        loginBox.innerHTML = `
     <h4 style="margin: 0 0 8px;">Login</h4>
-
-    <input id="email" type="text" placeholder="Email"
+    <form id="login-form">
+    <input id="email" type="text" placeholder="Email" autocomplete="email" 
         style="width: 100%; height: 28px; margin-bottom: 6px; font-size: 13px; padding: 4px 8px; box-sizing: border-box;" />
 
     <div id="email-error" style="color: red; font-size: 10px; height: 14px; margin-bottom: 6px;"></div>
 
     <div style="position: relative; width: 100%; margin-bottom: 8px;">
-        <input id="password" type="password" placeholder="Password"
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password"
             style="width: 100%; height: 28px; font-size: 13px; padding: 4px 30px 4px 8px; box-sizing: border-box;" />
         <span id="toggle-password"
             style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 14px;">
@@ -218,6 +218,7 @@
         style="width: 60%; padding: 6px; background: #FFEB3B; border: none; font-weight: bold; cursor: pointer;">
         Submit
     </button>
+    </form>
 `;
 
     // Append the login box to the document body
@@ -232,17 +233,13 @@
 });
 
     // Add click event listener to the Submit button
-        document.getElementById('login-submit').addEventListener('click', () => {
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const emailError = document.getElementById('email-error');
         const email = emailInput.value.trim();
         const password = passwordInput.value.trim();
-        document.getElementById('toggle-password').addEventListener('click', () => {
-        const passwordInput = document.getElementById('password');
-        const type = passwordInput.type === 'password' ? 'text' : 'password';
-        passwordInput.type = type;
-});
 
     // Simple email validation regex
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -374,68 +371,85 @@
                 btn.style.color = btn.innerText.toLowerCase() === tabName.toLowerCase() ? 'black' : 'white';
             }
         });
-        // If user navigated to a new video, clear old data
-            if (window.location.href !== lastVideoUrl) {
-            localStorage.removeItem('savedQuestion');
-            localStorage.removeItem('savedAnswer')
-            lastVideoUrl = window.location.href; 
-        }
-        
-        if (tabName.toLowerCase() === 'q/a') {
-        // Retrieve saved question and answer from localStorage (if any)
-            const savedQuestion = localStorage.getItem('savedQuestion') || '';
-            const savedAnswer = localStorage.getItem('savedAnswer') || '';
-        // Inject Q/A tab content with question textarea, send button, and answer display box
-            tabContentDiv.innerHTML = `
-         <textarea id="questionInput" placeholder="Ask your question here..." style="width:100%;height:60px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
-<div style="display:flex;justify-content:flex-end;margin-top:8px;">
-    <button id="sendQuestionBtn" style="background:#FFEB3B;color:black;padding:6px 14px;font-weight:bold;border:2px solid black;border-radius:8px;font-size:12px;cursor:pointer;">Send</button>
-</div>
-<div id="timestampContainer" style="margin-top:10px;"></div>
-<div style="flex-grow:1;display:flex;flex-direction:column;">
-    <h4 style="margin-top:8px;margin-bottom:4px;">Answer:</h4>
-    <textarea id="answerOutput" placeholder="Answer" readonly
-        style="flex-grow:1;width:100%;min-height:120px;padding:8px;border-radius:8px;
-        border:2px solid #FFEB3B;box-sizing:border-box;resize: vertical;overflow:auto;">
-    </textarea>
-</div>
-            `;
-            tabContentDiv.style.display = 'flex';
-tabContentDiv.style.flexDirection = 'column';
-tabContentDiv.style.height = '100%';
+
+    function showQANotification(message, isError = false) {
+    const notificationDiv = document.getElementById('qaNotification');
+    if (!notificationDiv) return;
+
+    notificationDiv.textContent = message;
+    notificationDiv.style.display = 'block';
+    notificationDiv.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
+    notificationDiv.style.color = isError ? '#721c24' : '#155724';
+    notificationDiv.style.border = isError ? '1px solid #f5c6cb' : '1px solid #c3e6cb';
+
+    // Hide after 3 seconds
+    setTimeout(() => {
+        notificationDiv.style.display = 'none';
+    }, 3000);
+}
+
+if (window.location.href !== lastVideoUrl) {
+    localStorage.removeItem('savedQuestion');
+    localStorage.removeItem('savedAnswer');
+    lastVideoUrl = window.location.href;
+}
+
+if (tabName.toLowerCase() === 'q/a') {
+    const savedQuestion = localStorage.getItem('savedQuestion') || '';
+    const savedAnswer = localStorage.getItem('savedAnswer') || '';
+
+    tabContentDiv.innerHTML = `
+    <div id="qaNotification" style="display:none;padding:8px;margin-top:8px;border-radius:6px;font-size:14px;text-align:center;"></div>
+
+    <textarea id="questionInput" placeholder="Ask your question here..." style="width:100%;height:60px;padding:8px;margin-top:10px;border-radius:8px;border:2px solid #FFEB3B;box-sizing:border-box;"></textarea>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button id="sendQuestionBtn" style="background:#FFEB3B;color:black;padding:6px 14px;font-weight:bold;border:2px solid black;border-radius:8px;font-size:12px;cursor:pointer;">Send</button>
+    </div>
+
+    <div id="timestampContainer" style="margin-top:10px;"></div>
+
+    <div style="flex-grow:1;display:flex;flex-direction:column;">
+        <h4 style="margin-top:8px;margin-bottom:4px;">Answer:</h4>
+        <textarea id="answerOutput" placeholder="Answer" readonly
+            style="flex-grow:1;width:100%;min-height:120px;padding:8px;border-radius:8px;
+            border:2px solid #FFEB3B;box-sizing:border-box;resize: vertical;overflow:auto;">
+        </textarea>
+    </div>
+`;
 
 
-        // Reference the question input and answer box elements
-            const questionInput = document.getElementById('questionInput');
-            const answerBox = document.getElementById('answerOutput');
-        // Restore previously typed question and answer (if available)
-            questionInput.value = savedQuestion;
-            answerBox.value = savedAnswer;
-    
-        // Save question to localStorage as the user types
-            questionInput.addEventListener('input', () => {
-            localStorage.setItem('savedQuestion', questionInput.value);
-        });
-    
-        // Handle send button click: send question to backend and show response
-           document.getElementById('sendQuestionBtn').addEventListener('click', async () => {
-           const question = questionInput.value.trim();
+    tabContentDiv.style.display = 'flex';
+    tabContentDiv.style.flexDirection = 'column';
+    tabContentDiv.style.height = '100%';
+
+    const questionInput = document.getElementById('questionInput');
+    const answerBox = document.getElementById('answerOutput');
+
+    questionInput.value = savedQuestion;
+    answerBox.value = savedAnswer;
+
+    questionInput.addEventListener('input', () => {
+        localStorage.setItem('savedQuestion', questionInput.value);
+    });
+
+    document.getElementById('sendQuestionBtn').addEventListener('click', async () => {
+        const question = questionInput.value.trim();
         if (!question) {
-        showQANotification('Please enter a question!', true);
-        return;
+            showQANotification('Please enter a question!', true);
+            return;
         }
-        // Get current video timestamp
-            const video = document.querySelector('video');
-            const videoId = new URLSearchParams(window.location.search).get("v");
-            const videoUrl = `https://youtu.be/${videoId}`;
-            const timestampInSeconds = video ? Math.floor(video.currentTime) : null;
-        // Format timestamp as mm:ss
-            const minutes = Math.floor(timestampInSeconds / 60);
-            const seconds = timestampInSeconds % 60;
-            const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-            // Add clickable timestamp link
-            const timestampContainer = document.getElementById('timestampContainer');
+        const video = document.querySelector('video');
+        const videoId = new URLSearchParams(window.location.search).get("v");
+        const videoUrl = `https://youtu.be/${videoId}`;
+        const timestampInSeconds = video ? Math.floor(video.currentTime) : null;
+
+        const minutes = Math.floor(timestampInSeconds / 60);
+        const seconds = timestampInSeconds % 60;
+        const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        const timestampContainer = document.getElementById('timestampContainer');
         if (timestampContainer && timestampInSeconds !== null) {
             timestampContainer.innerHTML = '';
 
@@ -450,70 +464,77 @@ tabContentDiv.style.height = '100%';
             `;
 
             timestampLink.addEventListener('click', () => {
-        if (video) {
-            video.currentTime = timestampInSeconds;
-            video.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            video.focus();
-        }
-    });
+                if (video) {
+                    video.currentTime = timestampInSeconds;
+                    video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    video.focus();
+                }
+            });
 
             timestampContainer.appendChild(timestampLink);
         }
 
-       // Prepare payload for API request
-            const payload = {
+        const payload = {
             youtube_video_url: videoUrl,
             question: question,
             time_stamp: formattedTime
         };
-        // Get JWT token from localStorage
-            const token = localStorage.getItem('qboxai-access-token');
+
+        const token = localStorage.getItem('qboxai-access-token');
+
         try {
-             answerBox.value = 'Loading...';
-        // Send POST request to backend
+            answerBox.value = 'Loading...';
+
             const response = await fetch('http://127.0.0.1:8000/app1/ask-question/', {
-            method: 'POST',
-            headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`  
-        },
-            body: JSON.stringify(payload),
-            mode: 'cors'
-    });
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload),
+                mode: 'cors'
+            });
+
             const data = await response.json();
-        // Display the answer or fallback message
-           if (data.success && data.data && data.data.answer) {
+
+    if (data.success && data.data && data.data.answer) {
     answerBox.value = data.data.answer;
     localStorage.setItem('savedAnswer', answerBox.value);
 } else {
     const backendMessage = data.message || 'Something went wrong.';
     answerBox.value = backendMessage;
     localStorage.setItem('savedAnswer', backendMessage);
-    showQANotification(backendMessage, true);
+
+    const lowerMsg = backendMessage.toLowerCase();
+    const isTranscriptUnavailable = lowerMsg.includes('transcript') && lowerMsg.includes('not available');
+
+    if (!isTranscriptUnavailable) {
+        showQANotification(backendMessage, true);
+    }
 }
 
-    } catch (error) {
-        console.error(error);
-        answerBox.value = 'Error getting answer.';
+        } catch (error) {
+            console.error(error);
+            answerBox.value = 'Error getting answer.';
+        }
+    });
+
+    const videoElement = document.querySelector('video');
+    if (videoElement) {
+        videoElement.addEventListener('loadeddata', () => {
+            localStorage.removeItem('savedQuestion');
+            localStorage.removeItem('savedAnswer');
+            questionInput.value = '';
+            answerBox.value = '';
+        });
     }
-});
-        // Clear saved data when a new video is loaded   
-                const videoElement = document.querySelector('video');
-                if (videoElement) {
-                videoElement.addEventListener('loadeddata', () => {
-                    localStorage.removeItem('savedQuestion');
-                    localStorage.removeItem('savedAnswer');
-                    questionInput.value = '';
-                    answerBox.value = ''; 
-                });
-            }
-        // Detect video change using video ID to reset related data
-                const currentVideoId = new URLSearchParams(window.location.search).get("v");
-                if (!window.lastVideoId || window.lastVideoId !== currentVideoId) {
-                window.lastVideoId = currentVideoId;
-                window.clipData = []; 
-            }
-            
+
+    const currentVideoId = new URLSearchParams(window.location.search).get("v");
+    if (!window.lastVideoId || window.lastVideoId !== currentVideoId) {
+        window.lastVideoId = currentVideoId;
+        window.clipData = [];
+    }
+  
 
         }  else if (tabName.toLowerCase() === 'clip') {
             // Inject UI for Clip tab
@@ -534,29 +555,35 @@ tabContentDiv.style.height = '100%';
             if (!window.clipData) window.clipData = [];
         
         // Save current clips to window.clipData & localStorage
-            const saveClipData = () => {
-            const currentUrl = window.location.href;
-            window.clipData = [...document.querySelectorAll('#clipContent > div')].map(container => {
-            const img = container.querySelector('img');
-            const question = container.querySelector('textarea:not([readonly])').value;
-            const answer = container.querySelector('textarea[readonly]').value;
-            const timestamp = container.getAttribute('data-timestamp') || 0;
-            return { image: img.src, question, answer, timestamp };
-        });
+        const saveClipData = () => {
+  const currentUrl = window.location.href;
 
-            chrome.storage.local.set({ 
-            clipData: window.clipData, 
-            clipVideoUrl: currentUrl 
-    }, () => {
-        if (chrome.runtime.lastError) {
-            console.error('Error saving clip data:', chrome.runtime.lastError);
-        } else {
-            console.log('Clip data saved for video:', currentUrl);
-        }
-    });
+  window.clipData = [...document.querySelectorAll('#clipContent > div')].map(container => {
+    const img = container.querySelector('img');
+    const questionEl = container.querySelector('textarea:not([readonly])');
+    const answerEl = container.querySelector('textarea[readonly]');
+    const timestamp = container.getAttribute('data-timestamp') || 0;
+
+    const image = img ? img.src : '';
+    const question = questionEl ? questionEl.value : '';
+    const answer = answerEl ? answerEl.value : '';
+
+    return { image, question, answer, timestamp };
+  });
+
+  chrome.storage.local.set(
+    {
+      clipData: window.clipData,
+      clipVideoUrl: currentUrl
+    },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving clip data:', chrome.runtime.lastError);
+      }
+    }
+  );
 };
- 
-        // Load and display saved clip from localStorage
+       // Load and display saved clip from localStorage
             const loadSavedClips = () => {
             const currentUrl = window.location.href;
 
@@ -565,7 +592,6 @@ tabContentDiv.style.height = '100%';
         if (savedUrl !== currentUrl) {
         // Clear old data if video changed
             chrome.storage.local.remove(['clipData', 'clipVideoUrl']);
-            console.log('New video detected. Old clip data cleared.');
             return;
         }
 
@@ -827,11 +853,18 @@ tabContentDiv.style.height = '100%';
                const token = localStorage.getItem('qboxai-access-token');
 
         // Get the first valid question from clipData
-                const firstClip = window.clipData.find(clip => clip.question.trim() !== '');
-            if (!firstClip) {
-                showNotification('Please enter at least one question.', true);
-            return;
-    }
+               const firstClip = window.clipData.find(clip => clip.image && clip.image.trim() !== '');
+
+if (!firstClip) {
+  showNotification('Please take a screenshot before sending.', true);
+  return;
+}
+
+if (!firstClip.question || firstClip.question.trim() === '') {
+  showNotification('Please enter the question.', true);
+  return;
+}
+
         // Convert base64 image string to Blob
                 const imageBlob = dataURLtoBlob(firstClip.image);
 
@@ -987,15 +1020,32 @@ document.head.appendChild(style);
             });
         }
     });
+             noteInput.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  const isTyping = document.activeElement === noteInput || noteInput.contains(document.activeElement);
 
-                const noteInput = document.getElementById('noteInput');
-                const videoId = new URLSearchParams(window.location.search).get('v');
-                const unsavedKey = `unsavedNote_${videoId}`;
+  if (!isTyping) return;
 
-                // 🔁 Load saved notes from localStorage
-                const savedNotesKey = `savedNotes_${videoId}`;
-                let savedNotes = JSON.parse(localStorage.getItem(savedNotesKey)) || [];
-                displayNotes(savedNotes);
+  if (key === ' ' && isTyping) {
+  e.stopPropagation(); 
+}
+
+  // 🟡 Allow formatting with Ctrl
+  const formattingKeys = ['b', 'i', 'u'];
+  if (e.ctrlKey && formattingKeys.includes(key)) {
+    e.preventDefault();
+    if (key === 'b') document.execCommand('bold');
+    else if (key === 'i') document.execCommand('italic');
+    else if (key === 'u') document.execCommand('underline');
+  }
+});
+            const videoId = new URLSearchParams(window.location.search).get('v');
+            const unsavedKey = `unsavedNote_${videoId}`;
+
+            //Load saved notes from localStorage
+            const savedNotesKey = `savedNotes_${videoId}`;
+            let savedNotes = JSON.parse(localStorage.getItem(savedNotesKey)) || [];
+            displayNotes(savedNotes);
 
 
             function showNoteMessage(message, isError = false) {
@@ -1027,38 +1077,6 @@ document.head.appendChild(style);
         }, 3000);
     }
 
-   noteInput.addEventListener('keydown', (e) => {
-    // Prevent YouTube shortcuts from triggering while typing
-    e.stopPropagation();
-
-    // ⛔️ Prevent spacebar from pausing video while typing
-    if (e.key === ' ') {
-        e.preventDefault();
-    }
-
-    // Prevent 't' key (and others) from triggering YouTube behavior
-    const isCharKey = e.key.length === 1;
-    if (isCharKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        // Manually insert character (optional fallback)
-        document.execCommand('insertText', false, e.key);
-        return;
-    }
-
-    // Handle formatting shortcuts
-    if (e.ctrlKey) {
-        if (e.key === 'b') {
-            document.execCommand('bold');
-            e.preventDefault();
-        } else if (e.key === 'i') {
-            document.execCommand('italic');
-            e.preventDefault();
-        } else if (e.key === 'u') {
-            document.execCommand('underline');
-            e.preventDefault();
-        }
-    }
-});
 
     const saved = localStorage.getItem(unsavedKey);
     if (saved) {
@@ -1234,6 +1252,56 @@ document.head.appendChild(style);
     noteDiv.appendChild(noteContent);
     notesDisplayDiv.appendChild(noteDiv);
 }
+document.addEventListener(
+  'keydown',
+  function (e) {
+    const noteInput = document.getElementById('noteInput');
+    if (!noteInput) return;
+
+    const isTyping = document.activeElement === noteInput || noteInput.contains(document.activeElement);
+    const key = e.key.toLowerCase();
+
+    if (isTyping) {
+      // ⛔ Block formatting shortcuts
+      if (e.ctrlKey && ['b', 'i', 'u'].includes(key)) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+
+      if (['t', 'i', 'f', 'j', 'k', 'l', 'm'].includes(key)) {
+  e.stopImmediatePropagation();
+  e.preventDefault();
+  document.execCommand('insertText', false, key);
+}
+
+      // ⛔ Block spacebar here too, as a safety net
+      if (key === ' ') {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        document.execCommand('insertText', false, ' ');
+      }
+    }
+  },
+  true 
+);
+
+// Also block keyup to stop YouTube reacting to spacebar
+document.addEventListener(
+  'keyup',
+  function (e) {
+    const noteInput = document.getElementById('noteInput');
+    if (!noteInput) return;
+
+    const isTyping = document.activeElement === noteInput || noteInput.contains(document.activeElement);
+    const key = e.key.toLowerCase();
+
+    if (isTyping && key === ' ') {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }
+  },
+  true 
+);
                 setInterval(() => {
                 if (location.href !== lastUrl) {
                 lastUrl = location.href;
